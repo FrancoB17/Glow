@@ -1,36 +1,4 @@
-#This code is the main code to run the GloWPa model. The model can be run for various waterborne pathogens
-#and and various spatial scales and resolutions. This code is the basis for the K2P mapping tool, among others.
-#This code was written by Nynke Hofstra in May 2019
-
-#still to do: 
-# add possible multiplying variables for all other variables than the ones already done
-# test the makeisogrids part
-# do we need to perform some checks everywhere to make sure the data are in the right format? We probably do. To be done.
-
-
-# Set paths ---------------------------------------------------------------
-
-rm(list=ls(all=TRUE))
-wd<-"C:/Users/hofst023/OneDrive - WageningenUR/Oude D schijf/Onderzoek/K2P/GloWPa model Uganda/temporary/"
-model_path<<-"C:/Users/hofst023/OneDrive - WageningenUR/Oude D schijf/Onderzoek/K2P/GloWPa model Uganda/"
-wd<<-paste0(model_path,"Model output/Uganda/")
-working.path.in<<-paste0(model_path,"Model input/Uganda/")
-working.path.in.pathogens<<-paste0(model_path,"Model input/")
-working.path.script<<-paste0(model_path,"Model scripts/")
-working.path.out<<-paste0(model_path,"Model output/Uganda/")
-
-
-# End to set paths --------------------------------------------------------
-
-
-#In case you want to set up scenarios, you can simply change the file overall_inputs.csv 
-#by adding more lines.
-
-#############AFTER THIS LINE THERE IS NO NEED TO CHANGE ANYTHING IN THIS SCRIPT OR OTHER SCRIPTS#####################
-setwd(wd)
-
-
-# Read in libraries -------------------------------------------------------
+# READ LIBS -------------------------------------------------------
 
 library(sp)
 library(rgeos)
@@ -41,231 +9,203 @@ library(RColorBrewer)
 library(rworldxtra)
 library(rgdal)
 
+# CONSTANTS -------------------------------------------------
 
-# End to read in libraries -------------------------------------------------
-
-
-# Open the overall input files and select the runs ------------------------
-# For the online tool, this should not be read in from a .csv file, but be initialised in the code
-# so there needs to be a switch selecting which of the two (model in R or tool with Rplumber)
-# will have to be run.
-
-#read in overall input file
-overall_inputs<-read.csv(paste0(working.path.in,"overall_inputs.csv"),stringsAsFactors=FALSE)
-runs<<-length(overall_inputs$run) #runs is the number of scenarios to be run
+# Is this used somewhere?
+MONS <<- c("jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec")
 
 
-# End to open the overall input files and run selection -------------------
+# FUNCTIONS ---------------------------------------------------------------
 
 
-#now run the model. First the human emissions model, then the calling_concentrations part that estimates the concentrations
-mons <<- c("jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec")
+model.start <- function(input,loadings_module,scenario_mode){
+  # load functions from scripts
 
-#I commented out the for loop, so that you can easily run through all the steps one after the other
-#In case you want to do a sensitivity or scenario analysis and do more runs at a time, you can 
-#remove the # before the for loop and put the # before i<-1. Don't forget to also remove the #
-#before } in the last line of the programme.
+  source(file.path(working.path.script,"Human_emissions.R"))
 
-
-# Initialisation of variables ---------------------------------------------
-
-#for (i in 1:runs){
-i<-1
-  
-  run<-overall_inputs$run
-#Identify the area. Here the grids within the area are assigned to the code of the area. Here a file is read in
-#that has either the polygons of areas or is a gridded file. The polygon file should always be transformed to the
-#set resolution.
-#makeisogrids.R needs to be run only the first time when you have polygon data. Afterwards, the isoreadformat can be
-#set to 2, as the isogrids file has been produced already.
-  reso<<-overall_inputs$resolution   #this resolution could be 0.5, 0.08333 or 0.008333 degree latitude x longitude (this corresponds to roughly 50x50, 10x10 and 1x1 km2)
-#  isoreadformat<<-2  #this is a switch to select in which format the iso information is read in. 1 stands for polygons, 2 stands for gridded
-#  if(isoreadformat==1 && isTRUE(first_time_area)){ #making isogrids is only required when this file needs to be made from polygons
-#    layer<<-"" #this is the name of the layer with the polygon file. It is supposed to be a shape file
-#    #in case the shape file is not in a standard lat-lon projection (WGS84), they need to also be transformed
-#    #that does currently not happen in the makeisogrids program.
-#    source(paste0(working.path.script,"makeisogrids.R"))
-#    print("finished makeisogrid")
-#  }
-  
-
-  #The isoraster needs to be prepared before running the model. This raster is a file that links 
-  #an area on the map to the district number it is located in.
-  isoraster<<-raster(paste0(working.path.in,overall_inputs$isoraster_filename)) #now read the isogrids
-  area_extent<<-extent(isoraster) #this extent covers the selected area. this extent can later be used to crop data (e.g. population)
-
-  #check that the correct resolution isoraster data have been read in
-
-  if((reso-xres(isoraster))>1e-5 || (reso-yres(isoraster))>1e-5){
-    print("ERROR: isoraster file has incorrect resolution!")
-    quit
-  
+  if(loadings_module==2){
+    source(file.path(working.path.in,"Pathogenflows.R"))
   }
-  #livestock switch - for now switched off. Later on the model can be adapted to include also livestock
-
-  livestock_switch=overall_inputs$livestock_switch
-
-  #select the pathogen:
-  pathogen<<-overall_inputs$pathogen #select pathogen. Options: rotavirus, cryptosporidium
-
-  #later on we may want to set an option that several pathogens can be selected at the same time -> in that case the loop below should be run multiple times with different input variables (easiest). This won't be the quickest option. It would be much quicker to run them simultaneiously, as for example the distribution over grids, the hydrology etc will be the same.
-  if(pathogen=="cryptosporidium" & identical(livestock_switch,FALSE)){
-    print(paste0("Warning: The pathogen ",pathogen," also has a livestock source. Please be aware the current model only simulates the human source"))
+  if(scenario_mode){
+    # run scenarios with original human emissions
+    # run.scenarios will call run() for each scenario
+    run.scenarios(input,loadings_module)
   }
+  else{
+    # online tool with pathogenflows module
+    # TODO: @Nynke: How to handle isoraster in this case?
+    isoraster = "?" # @Nynke where do the isorasters come from in case of the online tool?
+    pathogen = "?" # @Nynke where is the pathogen information in case of the online tool?
+    run(input,pathogen,isoraster,loadings_module)
+  }
+}
+
+
+model.run <- function(input,pathogen,isoraster,loadings_module,run_id=NULL){
+  # 1) calculate loadings
+  if(loadings_module==1){
+    loadings <- human.emissions.model.run(input,pathogen,isoraster)
+  }
+  else if(loadings_module==2){
+    
+    source(file.path(working.path.script,"Pathogenflows.R"))
+    # online tool input != onsitedata. Extract urban/rural data in pathogenflows scripts
+    loadings <- pathogenflow.model.run(input,pathogen)
+
+    ## @Nynke: wwtp and rasterization also in human_emissions.R. It would be nice if we can use same functions for it, but the input format (column names) is different
+    ## in mapping tool input and Human_Data.csv.  
+    # 2) apply wwtp if available
+    
+    # 3) emissions -> raster
+  }
+  
+
+  
+  # 4) maps, figs
+  
+  # 5) hydrology
+  
+  # 6) concentrations
+}
+
+
+#' Run GloWPa scenarios
+#' Run GlowPa from configuration.
+#' @param config {data.frame} - Configuration of the simulation runs
+#' @param iso_read_format {int} - 1 for polygons, 2 for raster
+#'
+#' @return
+#' @export
+#'
+#' @examples
+run.scenarios <- function(config, iso_read_format){
+  nruns <-length(config$run)
   #read in the pathogen specific input data
-  pathogen_inputs<<-read.csv(paste0(working.path.in.pathogens,"pathogen_inputs.csv"),stringsAsFactors=FALSE)
-  pathogen_row<<-which(pathogen_inputs$name==pathogen)
-  if(length(pathogen_row)<1){
-    print("Error: pathogen misspelled or not in list")
-  }
-  #is local - area specific incidence data available?
-
-  incidence_available<<-overall_inputs$incidence_available
-
-  if(isTRUE(incidence_available)){
-    pathogen_inputs$incidence_highhdi_over5[pathogen_row]<<-1 #change number - in case you are in a lowHDI area, you can leave this
-    pathogen_inputs$incidence_highhdi_under5[pathogen_row]<<-1 #change number - in case you are in a lowHDI area, you can leave this
-    pathogen_inputs$incidence_lowhdi_over5[pathogen_row]<<-1 #change number - in case you are in a highHDI area, you can leave this
-    pathogen_inputs$incidence_lowhdi_under5[pathogen_row]<<-1 #change number - in case you are in a highHDI area, you can leave this
-    print("Constand incidence is used throughout the study area. Only in larger areas HDI is used to distinguish areas with high and low incidence")
-  }else{
-  
-    print("Generic literature values for pathogen incidence will be used. The results are therefore average background emissions and concentrations.")
-  }
-
-  #calculate or provide correct variables to use in model for pathogen
-  #calculate extretion/shedding rates per person
-  ExcretionLowHDI_child<<-pathogen_inputs$incidence_lowhdi_under5[pathogen_row]*pathogen_inputs$shedding_pp_pd[pathogen_row]*pathogen_inputs$episodelength[pathogen_row]  #episodes per person per year * excretion per day * days per episode
-  ExcretionHighHDI_child<<-pathogen_inputs$incidence_highhdi_under5[pathogen_row]*pathogen_inputs$shedding_pp_pd[pathogen_row]*pathogen_inputs$episodelength[pathogen_row]
-  ExcretionLowHDI_others<<-pathogen_inputs$incidence_lowhdi_over5[pathogen_row]*pathogen_inputs$shedding_pp_pd[pathogen_row]*pathogen_inputs$episodelength[pathogen_row]
-  ExcretionHighHDI_others<<-pathogen_inputs$incidence_highhdi_over5[pathogen_row]*pathogen_inputs$shedding_pp_pd[pathogen_row]*pathogen_inputs$episodelength[pathogen_row]
-  #is gridded hydrological data available? Required are discharge, runoff, water level or depth, flow direction, residence time of water in each grid, and possibly water temperature and shortwave radiation to be consistent
-  hydrology_available<<-overall_inputs$hydrology_available
-  if(identical(hydrology_available,FALSE) & isTRUE(overall_inputs$interest_concentrations)){
-    #run the Wflow model in python - don't know how yet
-    print("WARNING: Only emissions can be estimated, no concentations yet - this will change once we have the Wflow model running")
-  }
-  #In some cases the resolution of the hydrological files does not meet the resolution of the isoraster and
-  #other files, such as the population density. In those cases we can simulate emissions at the set resolution
-  #and concentrations at a lower resolution. Already here we set up a new isoraster file that can be used throughout
-  #the model for the concentrations. All files required for the hydrology should be in the same resolution and
-  #will be fit to the extent of the isoraster developed here.
-  print(pathogen)
-  if(isTRUE(hydrology_available)){
-    discharge_files<<- list.files(path=(paste0(working.path.in,"discharge")))
-    discharge<<-raster(paste0(working.path.in,"discharge/",discharge_files[1]))
-    discharge<<-crop(discharge,extent(isoraster))
-    isoraster_hydro<<-crop(isoraster,extent(discharge))
-    res_multiplier<<-xres(discharge)/xres(isoraster)
-    if(res_multiplier>1){
-      isoraster_hydro<<-aggregate(isoraster_hydro,fact=res_multiplier,fun=modal,na.rm=TRUE)
-    }else if (res_multiplier<1){
-      print("ERROR: THE RESOLUTION OF THE HYDROLOGY DATA IS LOWER THAN THE SET RESOLUTION AND THE MODEL HAS NOT BEEN SET UP TO CORRECT FOR THIS!")
+  pathogen_inputs <- read.csv(file.path(working.path.in.pathogens,"pathogen_inputs.csv"),stringsAsFactors=FALSE)
+  if(nruns>0){
+    # LOOP RUNS
+    for(i in 1:nruns){
+      scenario <- config[i,]
+      # POLYGONS TO RASTER
+      if(iso_read_format==1 && which(names(scenario)=="first_time_area") == 0){
+        stop("missing required property 'first_time_area' in scenario")
+      }
+      else if(iso_read_format==1 && scenario$first_time_area){
+        # makeisogrids.R needs to be run only the first time when you have polygon data. Afterwards, the isoreadformat can be
+        # set to 2, as the isogrids file has been produced already.
+        # In case the shape file is not in a standard lat-lon projection (WGS84), they need to also be transformed
+        # that does currently not happen in the makeisogrids program.
+        source(file.path(working.path.script,"makeisogrids.R"))
+        make.iso.grids(scenario$layer, scenario$resolution)
+        # Raster has been made, switch to raster mode
+        iso_read_format <- 2
+      }
+      # The isoraster needs to be prepared before running the model. This raster is a file that links 
+      # an area on the map to the district number it is located in.
+      isoraster<<-raster(paste0(working.path.in,scenario$isoraster_filename)) #now read the isogrids
+      
+      # check that the correct resolution isoraster data have been read in
+      if((xres(isoraster))>1e-5 || (yres(isoraster))>1e-5){
+        stop("ERROR: isoraster file has incorrect resolution!")
+      }
+      
+      # livestock switch - for now switched off. Later on the model can be adapted to include also livestock
+      livestock_switch <- scenario$livestock_switch
+      
+      #select the pathogen:
+      pathogen_name <- scenario$pathogen #select pathogen. Options: rotavirus, cryptosporidium
+      
+      #later on we may want to set an option that several pathogens can be selected at the same time -> in that case the loop below should be run multiple times with different input variables (easiest). This won't be the quickest option. It would be much quicker to run them simultaneiously, as for example the distribution over grids, the hydrology etc will be the same.
+      if(pathogen_name=="cryptosporidium" && !livestock_switch){
+        warning(sprintf("Warning: the pathogen %s also has a livestock source. Please be aware the current model only simulates the human source",pathogen_name))
+      }
+      
+      pathogen_row <- which(pathogen_inputs$name==pathogen_name)
+      if(length(pathogen_row)<1){
+        stop("Error: pathogen misspelled or not in list")
+      }
+      pathogen <- pathogen_inputs[pathogen_row,]
+      # is local - area specific incidence data available?
+      incidence_available <-scenario$incidence_available
+      if(incidence_available){
+        pathogen$incidence_highhdi_over5 <-1 #change number - in case you are in a lowHDI area, you can leave this
+        pathogen$incidence_highhdi_under5 <-1 #change number - in case you are in a lowHDI area, you can leave this
+        pathogen$incidence_lowhdi_over5 <-1 #change number - in case you are in a highHDI area, you can leave this
+        pathogen$incidence_lowhdi_under5 <-1 #change number - in case you are in a highHDI area, you can leave this
+        print("Constand incidence is used throughout the study area. Only in larger areas HDI is used to distinguish areas with high and low incidence")
+      }
+      else{
+        print("Generic literature values for pathogen incidence will be used. The results are therefore average background emissions and concentrations.")
+      }
+      
+      # scenarios will run with original human emissions module
+      model.run(scenario,pathogen,isoraster,1,scenario$run)
+      # Commented out hydrology and wwtp preperations, because it should be done outside scenario mode
+      
+      #is gridded hydrological data available? Required are discharge, runoff, water level or depth, flow direction, residence time of water in each grid, and possibly water temperature and shortwave radiation to be consistent
+      # hydrology_available<<-scenario$hydrology_available
+      # if(identical(hydrology_available,FALSE) & isTRUE(overall_inputs$interest_concentrations)){
+      #   #run the Wflow model in python - don't know how yet
+      #   print("WARNING: Only emissions can be estimated, no concentations yet - this will change once we have the Wflow model running")
+      # }
+      # print(pathogen$name)
+      # if(hydrology_available){
+      #   discharge_files <<- list.files(path=(file.path(working.path.in,"discharge")))
+      #   discharge <<-raster(file.path(working.path.in,"discharge",discharge_files[1]))
+      #   discharge <<-crop(discharge,extent(isoraster))
+      #   isoraster_hydro <<- crop(isoraster,extent(discharge))
+      #   res_multiplier<<-xres(discharge)/xres(isoraster)
+      #   if(res_multiplier>1){
+      #     isoraster_hydro<<-aggregate(isoraster_hydro,fact=res_multiplier,fun=modal,na.rm=TRUE)
+      #   }else if (res_multiplier<1){
+      #     print("ERROR: THE RESOLUTION OF THE HYDROLOGY DATA IS LOWER THAN THE SET RESOLUTION AND THE MODEL HAS NOT BEEN SET UP TO CORRECT FOR THIS!")
+      #   }
+      # }
+      # 
+      # #is location-specific WWTP data available?
+      # wwtp_available <<- scenario$wwtp_available
+      # if(wwtp_available==3){
+      #   print("Emissions from the population connected to a sewer will be entered in a single grid (also the sewage not treated). Leaky pipes are therefore missed. This option is only realistic when for the full area covered has data on WWTP location")
+      # }else if(wwtp_available==2){
+      #   print("The emissions from sewers will be spread over the grids. This is fine in low-resolution maps (~0.5 degree), but unrealistic at high-resolution maps, where waste is emitted at one point, rather than throughout the grids. It would therefore be better to provide location-specific information on WWTPs")
+      # }
+      # 
+      # if(wwtp_available==3 && reso>0.1){
+      #   print("Unless WWTP location data are available for the full study area, the combination of resolution and use of WWTP location data is unrealistic, because at present all emissions from people connected to sewers will go to these WWTPs")
+      # }
+      # 
+      # #Are you interested in emissions to water only, or also river concentrations?
+      # interest_concentrations<<-scenario$interest_concentrations
+      # if(identical(interest_concentrations,FALSE)){
+      #   print("Concentrations will not be calculated. Hydrology is only used to estimate runoff of faeces on the land")
+      # }
+      # 
+      # Sys.time()
+      # # in case you do not want to run the human_emissions script all at once, you can stop here with running
+      # # the model line by line and move to the human emissions script and run that script line by line.
+      # # contains grid for land, water and emissions data.frame
+      # human_emissions <- human.emissions.model.run(scenario,pathogen,isoraster)
+      # print("finished human emissions")
+      # Sys.time()
+      # 
+      # if(hydrology_available){
+      #   # TODO: write raster here or skip, because it was not used?
+      #   if(interest_concentrations){
+      #     source(file.path(working.path.script,"calling_concentrations.R"))
+      #     print("finished concentrations")
+      #   }
+      # }
     }
+    print(i)
   }
-
-  #is location-specific WWTP data available?
-  wwtp_available<<-overall_inputs$wwtp_available
-  if(wwtp_available==3){
-    print("Emissions from the population connected to a sewer will be entered in a single grid (also the sewage not treated). Leaky pipes are therefore missed. This option is only realistic when for the full area covered has data on WWTP location")
-  }else if(wwtp_available==2){
-    print("The emissions from sewers will be spread over the grids. This is fine in low-resolution maps (~0.5 degree), but unrealistic at high-resolution maps, where waste is emitted at one point, rather than throughout the grids. It would therefore be better to provide location-specific information on WWTPs")
-  }
-
-  if(wwtp_available==3 && reso>0.1){
-    print("Unless WWTP location data are available for the full study area, the combination of resolution and use of WWTP location data is unrealistic, because at present all emissions from people connected to sewers will go to these WWTPs")
-  }
-
-  #Are you interested in emissions to water only, or also river concentrations?
-  interest_concentrations<<-overall_inputs$interest_concentrations
-  if(identical(interest_concentrations,FALSE)){
-    print("Concentrations will not be calculated. Hydrology is only used to estimate runoff of faeces on the land")
-  }
-
-
-# End to initialising the variables ---------------------------------------
-
-# The current programme doesn't use the results output file ---------------
-
-  #create results dataframe ##I don't think this currently works. Is from Lucie's model still.
-  run_number<<-c(1:runs)
-  results<<-data.frame(run_number)
-  results$conc_q5<-NA
-  results$conc_q25<-NA
-  results$conc_q50<-NA
-  results$conc_q75<-NA
-  results$conc_q95<-NA
-  results$conc_mean<-NA
-  results$load_q5<-NA
-  results$load_q25<-NA
-  results$load_q50<-NA
-  results$load_q75<-NA
-  results$load_q95<-NA
-  results$load_mean<-NA
-  results$f_diffuse_jan<-NA
-  results$f_diffuse_feb<-NA
-  results$f_diffuse_mar<-NA
-  results$f_diffuse_apr<-NA
-  results$f_diffuse_may<-NA
-  results$f_diffuse_jun<-NA
-  results$f_diffuse_jul<-NA
-  results$f_diffuse_aug<-NA
-  results$f_diffuse_sep<-NA
-  results$f_diffuse_oct<-NA
-  results$f_diffuse_nov<-NA
-  results$f_diffuse_dec<-NA
-  results$load_diffuse_jan<-NA
-  results$load_diffuse_feb<-NA
-  results$load_diffuse_mar<-NA
-  results$load_diffuse_apr<-NA
-  results$load_diffuse_may<-NA
-  results$load_diffuse_jun<-NA
-  results$load_diffuse_jul<-NA
-  results$load_diffuse_aug<-NA
-  results$load_diffuse_sep<-NA
-  results$load_diffuse_oct<-NA
-  results$load_diffuse_nov<-NA
-  results$load_diffuse_dec<-NA
-  results$load_point_jan<-NA
-  results$load_point_feb<-NA
-  results$load_point_mar<-NA
-  results$load_point_apr<-NA
-  results$load_point_may<-NA
-  results$load_point_jun<-NA
-  results$load_point_jul<-NA
-  results$load_point_aug<-NA
-  results$load_point_sep<-NA
-  results$load_point_oct<-NA
-  results$load_point_nov<-NA
-  results$load_point_dec<-NA
-  results$routed_f<-NA
-  results$routed_oo<-NA
   
-
-# End to results output file - not used -----------------------------------
-
-# Running the human emission script ---------------------------------------
-
-  Sys.time()
-  # in case you do not want to run the human_emissions script all at once, you can stop here with running
-  # the model line by line and move to the human emissions script and run that script line by line.
-  source(paste0(working.path.script,"Human_emissions.R"))
-  print("finished human emissions")
-  Sys.time()
-
-# End to running the human emission script --------------------------------
-
-
-# Running the hydrology - not used in this version of the model -----------
-
-  if(isTRUE(hydrology_available) && isTRUE(interest_concentrations)){
-    source(paste0(working.path.script,"calling_concentrations.R"))
-    print("finished concentrations")
+  else{
+    warning("No runs found in configuration")
   }
+  
+}
 
-# End to running the hydrology -------------------------------------------
 
-  print(i)
 
-#}
+
 
