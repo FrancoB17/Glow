@@ -77,7 +77,6 @@ human.emissions.model.run <- function(scenario,pathogen,isoraster){
   # calc corrected population
   pop_corrected <- correct.population(popurban_grid,popurban_grid,isoraster,HumanData)
   
-  popurban_grid <- pop_corrected$urban
   poprural_grid <- pop_corrected$rural
   
   # CALCULATION OF EMISSIONS PER SANITION TYPE AND SUBAREA
@@ -245,6 +244,7 @@ calc.emissions <- function(scenario,pathogen,HumanData){
       
       int1<-integrate(f2,0,HumanData$storage_flush_urb[b[j]])
       HumanData$survival_pit_flush_urb[b[j]]<-int1$value/HumanData$storage_flush_urb[b[j]]
+      
       int1<-integrate(f2,0,HumanData$storage_flush_rur[b[j]])
       HumanData$survival_pit_flush_rur[b[j]]<-int1$value/HumanData$storage_flush_rur[b[j]]
       
@@ -507,60 +507,13 @@ calc.wttp.emissions.subarea <- function(emissions,WWTP_inputs,HumanData){
   return(emissions)
 }
 
-calc.water.emissions.grid <- function(emissions,isoraster){
-  pathogen_urban_water_pp<-data.frame(iso=emissions$iso,value=emissions$pathogen_urb_waterforgrid_pp)
-  pathogen_urban_water_pp_raster<-subs(isoraster, pathogen_urban_water_pp , subsWithNA=T)
-  
-  pathogen_rural_water_pp<-data.frame(iso=emissions$iso,value=emissions$pathogen_rur_waterforgrid_pp)
-  pathogen_rural_water_pp_raster<-subs(isoraster, pathogen_rural_water_pp , subsWithNA=T)
-  
-  pathogen_urban_water_grid<-pathogen_urban_water_pp_raster*popurban_grid
-  pathogen_rural_water_grid<-pathogen_rural_water_pp_raster*poprural_grid
-  
-  temp<-data.frame(bla=NA,value=0)
-  pathogen_urban_water_grid<-subs(pathogen_urban_water_grid,temp,subsWithNA=F)
-  pathogen_rural_water_grid<-subs(pathogen_rural_water_grid,temp,subsWithNA=F)
-  
-  temp<-data.frame(bla=NaN,value=0)
-  pathogen_urban_water_grid<-subs(pathogen_urban_water_grid,temp,subsWithNA=F)
-  pathogen_rural_water_grid<-subs(pathogen_rural_water_grid,temp,subsWithNA=F)
-  
-  pathogen_water_grid<-pathogen_urban_water_grid+pathogen_rural_water_grid
-  return(pathogen_water_grid)
-}
-
-calc.land.emissions.grid <- function(emissions,isoraster){
-  #for emissions to land
-  pathogen_urban_land_pp<-data.frame(iso=emissions$iso,value=emissions$pathogen_urb_landforgrid_pp)
-  pathogen_urban_land_pp_raster<-subs(isoraster, pathogen_urban_land_pp , subsWithNA=T)
-  
-  pathogen_rural_land_pp<-data.frame(iso=emissions$iso,value=emissions$pathogen_rur_landforgrid_pp)
-  pathogen_rural_land_pp_raster<-subs(isoraster, pathogen_rural_land_pp , subsWithNA=T)
-  
-  pathogen_urban_land_grid<-pathogen_urban_land_pp_raster*popurban_grid
-  pathogen_rural_land_grid<-pathogen_rural_land_pp_raster*poprural_grid
-  
-  temp<-data.frame(bla=NA,value=0)
-  pathogen_urban_land_grid<-subs(pathogen_urban_land_grid,temp,subsWithNA=F)
-  pathogen_rural_land_grid<-subs(pathogen_rural_land_grid,temp,subsWithNA=F)
-  
-  temp<-data.frame(bla=NaN,value=0)
-  pathogen_urban_land_grid<-subs(pathogen_urban_land_grid,temp,subsWithNA=F)
-  pathogen_rural_land_grid<-subs(pathogen_rural_land_grid,temp,subsWithNA=F)
-  
-  pathogen_land_grid<-pathogen_urban_land_grid+pathogen_rural_land_grid
-  return(pathogen_land_grid)
-  
-}
-
 calc.emissions.grid <- function(isoraster,iso,emissions_forgrid_pp,pop_grid){
   pathogen_pp<-data.frame(iso=iso,value=emissions_forgrid_pp)
   pathogen_pp_raster<-subs(isoraster, pathogen_pp , subsWithNA=T)
   pathogen_grid <- pathogen_pp_raster * pop_grid
-  # Why is this twice?
+
   temp<-data.frame(bla=NA,value=0)
-  pathogen_grid <- subs(pathogen_urban_water_grid,temp,subsWithNA=F)
-  pathogen_grid <- subs(pathogen_urban_water_grid,temp,subsWithNA=F)
+  pathogen_grid <- subs(pathogen_grid,temp,subsWithNA=F)
   return(pathogen_grid)
 }
 
