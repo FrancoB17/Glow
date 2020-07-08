@@ -18,54 +18,97 @@ MONS <<- c("jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","de
 # FUNCTIONS ---------------------------------------------------------------
 
 
-model.start <- function(input,loadings_module,scenario_mode){
+model.start <- function(config,loadings_module,tool_mode){
   # load functions from scripts
-
-  source(file.path(working.path.script,"Human_emissions.R"))
-
-  if(loadings_module==2){
-    source(file.path(working.path.in,"Pathogenflows.R"))
-  }
-  if(scenario_mode){
+  if(!tool_mode){
     # run scenarios with original human emissions
     # run.scenarios will call run() for each scenario
-    run.scenarios(input,loadings_module)
+    source(file.path(working.path.script,"Human_emissions.R"))
+    
+    run.original.mode(config)
   }
   else{
     # online tool with pathogenflows module
-    # TODO: @Nynke: How to handle isoraster in this case?
-    isoraster = "?" # @Nynke where do the isorasters come from in case of the online tool?
-    pathogen = "?" # @Nynke where is the pathogen information in case of the online tool?
-    run(input,pathogen,isoraster,loadings_module)
+    # run one row, because there is only one
+    run.mapping.tool(config[1,])
+   
   }
 }
 
+# this will the plumber api method (POST). scenario data can be retrieved from mapping_tool_init
+run.mapping.tool <- function(scenario,human_data_csv=NULL){
+  # TODO: @Nynke: How to handle isoraster in this case? 
+  isoraster<<-raster(file.path(working.path.in,scenario$isoraster_filename))
+  pathogen_inputs <- read.csv(file.path(working.path.in.pathogens,"pathogen_inputs.csv"),stringsAsFactors=FALSE)
+  # search pathogen information
+  pathogen_row <- which(pathogen_inputs$name==scenario$pathogen)
+  if(length(pathogen_row)<1){
+    stop("Error: pathogen misspelled or not in list")
+  }
+  pathogen <- pathogen_inputs[pathogen_row,]
+  if(is.null(human_data_csv)){
+    human_data <- read.csv(file.path(working.path.in,scenario$HumanData_filename))
+  }
+  else{
+    human_data <- read.csv(text = human_data_csv)
+  }
+  model.run(scenario, human_data,pathogen,isoraster,loadings_module = 2)
+}
 
-model.run <- function(input,pathogen,isoraster,loadings_module,run_id=NULL){
+model.run <- function(scenario,human_data,pathogen,isoraster,loadings_module){
+  # 0a) set globals
+  SCENARIO <<- scenario
+  HUMAN_DATA <<- human_data
+  ISORASTER <<- isoraster
+  AREA_EXTENT <<- extent(isoraster)
+  # 0b) correct population data
+  source("Model scripts/population.R")
+  populations <- population.preprocess()
   # 1) calculate loadings
   if(loadings_module==1){
-    loadings <- human.emissions.model.run(input,pathogen,isoraster)
+    # input is the scenario. human data is read in the human.emissions.model.run
+    emissions <- human.emissions.model.run(human_data,pathogen,isoraster)
   }
   else if(loadings_module==2){
     
     source(file.path(working.path.script,"Pathogenflows.R"))
     # online tool input != onsitedata. Extract urban/rural data in pathogenflows scripts
-    loadings <- pathogenflow.model.run(input,pathogen)
-
-    ## @Nynke: wwtp and rasterization also in human_emissions.R. It would be nice if we can use same functions for it, but the input format (column names) is different
-    ## in mapping tool input and Human_Data.csv.  
-    # 2) apply wwtp if available
-    
-    # 3) emissions -> raster
+    emissions <- pathogenflow.model.run(pathogen)
   }
   
-
-  
-  # 4) maps, figs
-  
-  # 5) hydrology
-  
-  # 6) concentrations
+  ## @Nynke: wwtp and rasterization also in human_emissions.R. It would be nice if we can use same functions for it, but the input format (column names) is different
+  ## in mapping tool input and Human_Data.csv.  
+  # 2) apply wwtp if available
+  source(file.path(working.path.script,"wwtp_module.R"))
+  wttp_output <- wwtp.module.run(emissions,pathogen,popurban_grid = popurban_grid,poprural_grid = poprural_grid)
+  emissions <- wttp_output$emissions
+  # 3) emissions -> raster
+  if(SCENARIO$hydrology_available){
+    
+  }
+  else{
+    #In case no hydrology is available, we assume a 0.025 fraction reaching the water. This is high for many regions!
+    
+    pathogen_land_grid<-0.025*wttp_output$grids$land
+    pathogen_water_grid<-wttp_output$grids$water+pathogen_land_grid
+    emissions$pathogen_urb_dif<-0.025*emissions$pathogen_urb_dif
+    emissions$pathogen_rur_dif<-0.025*emissions$pathogen_rur_dif
+    emissions$pathogen_urb_onsite_land<-0.025*emissions$pathogen_urb_onsite_land
+    emissions$pathogen_rur_onsite_land<-0.025*emissions$pathogen_rur_onsite_land
+    # save is asci grid format
+    writeRaster(pathogen_water_grid,file.path(working.path.out,sprintf("humanemissions_%s%s",pathogen$name,SCENARIO$run)), format="ascii", overwrite=TRUE)
+    
+  }
+  # 4) save results
+  # save geotiff
+  pathogen_water_grid[pathogen_water_grid==0]<-NA
+  writeRaster(pathogen_water_grid,file.path(working.path.out,sprintf("humanemissions_%s%s",pathogen$name,SCENARIO$run)),format="GTiff",overwrite=TRUE)
+  library(tidyverse)
+  library(dplyr)
+  selection <- point %>% select(1:16)
+  write.csv(selection, file=file.path(working.path.out,sprintf("HumanEmissionsCalculated_%s%s.csv",pathogen$name,SCENARIO$run)))
+  detach("package:tidyverse", unload=TRUE)
+  detach("package:dplyr", unload=TRUE)
 }
 
 
@@ -78,7 +121,7 @@ model.run <- function(input,pathogen,isoraster,loadings_module,run_id=NULL){
 #' @export
 #'
 #' @examples
-run.scenarios <- function(config, iso_read_format){
+run.original.mode <- function(config, iso_read_format=1){
   nruns <-length(config$run)
   #read in the pathogen specific input data
   pathogen_inputs <- read.csv(file.path(working.path.in.pathogens,"pathogen_inputs.csv"),stringsAsFactors=FALSE)

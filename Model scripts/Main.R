@@ -25,12 +25,11 @@ working.path.out<<-paste0(model_path,"Model output/Uganda/")
 # Options 
 #ISO_READ_FORMATS <- list(POLYGON=1,RASTER=2)
 EMISSION_MODULES <- list(NYNKE=1,MATT=2)
-SCENARIO_MODES <- list(ON=T,OFF=F) 
+TOOL_MODES <- list(ON=T,OFF=F) 
 # Set option here
 #iso_read_format <- ISO_READ_FORMATS$POLYGON
 emissions_module <- EMISSION_MODULES$MATT
-scenario_mode <- SCENARIO_MODES$ON
-
+tool_mode <- TOOL_MODES$ON
 #############AFTER THIS LINE THERE IS NO NEED TO CHANGE ANYTHING IN THIS SCRIPT OR OTHER SCRIPTS#####################
 setwd(wd)
 source(file.path(working.path.script,"GloWPa configuration.R"))
@@ -41,15 +40,18 @@ source(file.path(working.path.script,"GloWPa configuration.R"))
 # will have to be run.
 
 # run original GloPWa
-if(scenarion_mode){
+if(tool_mode){
   #read in overall input file
-  input_file<-read.csv(paste0(working.path.in,"overall_inputs.csv"),stringsAsFactors=FALSE)
+  config <- read.csv(paste0(working.path.in,"overall_inputs.csv"),stringsAsFactors=FALSE)
 } else{
   # run GloWPa for mapping tool
-  input_file <- file.path(working.path.in,"input_data.csv")
+  source(file.path(working.path.script,"mapping_tool_init.R"))
+  config <- mapping.tool.get.config()
+  #input_file <- read.csv(file.path(working.path.in,"input_data.csv"))
 }
 
-model.start(overall_inputs,emissions_module,scenario_mode)
+
+model.start(config,emissions_module,scenario_mode)
 
 
 # End to open the overall input files and run selection -------------------

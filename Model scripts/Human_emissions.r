@@ -24,9 +24,9 @@ human.emissions.model.run <- function(scenario,pathogen,isoraster){
   #calculate or provide correct variables to use in model for pathogen
   #calculate extretion/shedding rates per person
   ExcretionLowHDI_child<<-pathogen$incidence_lowhdi_under5*pathogen$shedding_pp_pd*pathogen$episodelength  #episodes per person per year * excretion per day * days per episode
-  ExcretionHighHDI_child<<-pathogen$incidence_highhdi_under5*pathogen$shedding_pp_pd*pathogen$episodelength
+  excretion_child<<-pathogen$incidence_highhdi_under5*pathogen$shedding_pp_pd*pathogen$episodelength
   ExcretionLowHDI_others<<-pathogen$incidence_lowhdi_over5*pathogen$shedding_pp_pd*pathogen$episodelength
-  ExcretionHighHDI_others<<-pathogen$incidence_highhdi_over5*pathogen$shedding_pp_pd*pathogen$episodelength
+  excretion_others<<-pathogen$incidence_highhdi_over5*pathogen$shedding_pp_pd*pathogen$episodelength
   
   area_extent <-extent(isoraster) #this extent covers the selected area. this extent can later be used to crop data (e.g. population)
   # READ HUMAN & WWTP
@@ -82,7 +82,7 @@ human.emissions.model.run <- function(scenario,pathogen,isoraster){
   # CALCULATION OF EMISSIONS PER SANITION TYPE AND SUBAREA
   # Be aware: in case we have WWTP location data, the reduction in those has not yet been added
   # to the emissions. That is why after this section the point dataframe cannot yet be saved as file.
-  emissions <- calc.emissions(scenario,pathogen,HumanData)
+  emissions <- get.emissions(scenario,pathogen,HumanData)
   emissions <- calc.pop.emissions(emissions,HumanData)
   # clean na values
   emissions <- remove.na.emissions(emissions)
@@ -181,7 +181,7 @@ correct.population <- function(pop_urban_grid,pop_rulal_grid,isoraster,HumanData
 #' @export
 #'
 #' @examples
-calc.emissions <- function(scenario,pathogen,HumanData){
+get.emissions <- function(scenario,pathogen,HumanData){
   
   #fill all the added columns
   HumanData$removalfraction <- 
@@ -234,118 +234,76 @@ calc.emissions <- function(scenario,pathogen,HumanData){
   HumanData$survival_pit_flush_rur<-NA
   
   #for HDI high
-  if(length(b)>0){
-    for (j in 1:length(HumanData$iso[b])){ #calculate per subarea
+  output <- calc.emissions(HumanData,point,b,ExcretionHighHDI_child, ExcretionHighHDI_others)
+  HumanData <- output$human
+  point<- output$emissions
+
+  #for HDI low
+  output <- calc.emissions(HumanData,point,a,ExcretionLowHDI_child, ExcretionHighHDI_others)
+  HumanData <- output$human
+  point<- output$emissions
+  
+  return(point)
+}
+
+calc.emissions <- function(HumanData, point, subset ,excretion_child, excretion_others){
+  if(length(subset>0)){
+    for (j in 1:length(HumanData$iso[subset])){ #calculate per subarea
       #calculate decay in onsite systems
-      int<-integrate(f2,0,HumanData$storage_empty_urb[b[j]])
-      HumanData$survival_pit_empty_urb[b[j]]<-int$value/HumanData$storage_empty_urb[b[j]]
-      int<-integrate(f2,0,HumanData$storage_empty_rur[b[j]])
-      HumanData$survival_pit_empty_rur[b[j]]<-int$value/HumanData$storage_empty_rur[b[j]]
+      int<-integrate(f2,0,HumanData$storage_empty_urb[subset[j]])
+      HumanData$survival_pit_empty_urb[subset[j]]<-int$value/HumanData$storage_empty_urb[subset[j]]
+      int<-integrate(f2,0,HumanData$storage_empty_rur[subset[j]])
+      HumanData$survival_pit_empty_rur[subset[j]]<-int$value/HumanData$storage_empty_rur[subset[j]]
       
-      int1<-integrate(f2,0,HumanData$storage_flush_urb[b[j]])
-      HumanData$survival_pit_flush_urb[b[j]]<-int1$value/HumanData$storage_flush_urb[b[j]]
+      int1<-integrate(f2,0,HumanData$storage_flush_urb[subset[j]])
+      HumanData$survival_pit_flush_urb[subset[j]]<-int1$value/HumanData$storage_flush_urb[subset[j]]
       
-      int1<-integrate(f2,0,HumanData$storage_flush_rur[b[j]])
-      HumanData$survival_pit_flush_rur[b[j]]<-int1$value/HumanData$storage_flush_rur[b[j]]
+      int1<-integrate(f2,0,HumanData$storage_flush_rur[subset[j]])
+      HumanData$survival_pit_flush_rur[subset[j]]<-int1$value/HumanData$storage_flush_rur[subset[j]]
       
       #calculate the emissions by the specific population groups
       #in case people are interested in children/adults, these number can be split into <5 and >5, but this complicates the model
-      point$pathogen_urb_con[b[j]]<-HumanData$con_urb[b[j]]*(ExcretionHighHDI_child*NappyCor*HumanData$pop_urb_under5[b[j]]+ExcretionHighHDI_others*HumanData$pop_urb_over5[b[j]])
-      point$pathogen_rur_con[b[j]]<-HumanData$con_rur[b[j]]*(ExcretionHighHDI_child*NappyCor*HumanData$pop_rur_under5[b[j]]+ExcretionLowHDI_others*HumanData$pop_rur_over5[b[j]])
-      point$pathogen_urb_dir[b[j]]<-HumanData$dir_urb[b[j]]*UrbanDirect2Water*(ExcretionHighHDI_child*HumanData$pop_urb_under5[b[j]]+ExcretionHighHDI_others*HumanData$pop_urb_over5[b[j]])
-      point$pathogen_rur_dir[b[j]]<-HumanData$dir_rur[b[j]]*RuralDirect2Water*(ExcretionHighHDI_child*HumanData$pop_rur_under5[b[j]]+ExcretionHighHDI_others*HumanData$pop_rur_over5[b[j]])
-      point$pathogen_urb_dif[b[j]]<-HumanData$dif_urb[b[j]]*UrbanDiffuse2Water*(ExcretionHighHDI_child*HumanData$pop_urb_under5[b[j]]+ExcretionHighHDI_others*HumanData$pop_urb_over5[b[j]])
-      point$pathogen_rur_dif[b[j]]<-HumanData$dif_rur[b[j]]*RuralDiffuse2Water*(ExcretionHighHDI_child*HumanData$pop_rur_under5[b[j]]+ExcretionHighHDI_others*HumanData$pop_rur_over5[b[j]])
-      point$pathogen_urb_onsite_treated[b[j]]<-HumanData$onsite_urb_treated[b[j]]*HumanData$survival_pit_empty_urb[b[j]]*UrbanOnsite2Water*(ExcretionHighHDI_child*NappyCor*HumanData$pop_urb_under5[b[j]]+ExcretionHighHDI_others*HumanData$pop_urb_over5[b[j]])/HumanData$storage_empty_urb[b[j]]
-      point$pathogen_rur_onsite_treated[b[j]]<-HumanData$onsite_rur_treated[b[j]]*HumanData$survival_pit_empty_rur[b[j]]*UrbanOnsite2Water*(ExcretionHighHDI_child*NappyCor*HumanData$pop_rur_under5[b[j]]+ExcretionHighHDI_others*HumanData$pop_rur_over5[b[j]])/HumanData$storage_empty_rur[b[j]]
-      point$pathogen_urb_onsite_water[b[j]]<-HumanData$onsite_urb_water[b[j]]*HumanData$survival_pit_empty_urb[b[j]]*UrbanOnsite2Water*(ExcretionHighHDI_child*NappyCor*HumanData$pop_urb_under5[b[j]]+ExcretionHighHDI_others*HumanData$pop_urb_over5[b[j]])/HumanData$storage_empty_urb[b[j]]
-      point$pathogen_rur_onsite_water[b[j]]<-HumanData$onsite_rur_water[b[j]]*HumanData$survival_pit_empty_rur[b[j]]*UrbanOnsite2Water*(ExcretionHighHDI_child*NappyCor*HumanData$pop_rur_under5[b[j]]+ExcretionHighHDI_others*HumanData$pop_rur_over5[b[j]])/HumanData$storage_empty_rur[b[j]]
-      point$pathogen_urb_onsite_land[b[j]]<-HumanData$onsite_urb_land[b[j]]*HumanData$survival_pit_empty_urb[b[j]]*UrbanOnsite2Water*(ExcretionHighHDI_child*NappyCor*HumanData$pop_urb_under5[b[j]]+ExcretionHighHDI_others*HumanData$pop_urb_over5[b[j]])/HumanData$storage_empty_urb[b[j]]
-      point$pathogen_rur_onsite_land[b[j]]<-HumanData$onsite_rur_land[b[j]]*HumanData$survival_pit_empty_rur[b[j]]*UrbanOnsite2Water*(ExcretionHighHDI_child*NappyCor*HumanData$pop_rur_under5[b[j]]+ExcretionHighHDI_others*HumanData$pop_rur_over5[b[j]])/HumanData$storage_empty_rur[b[j]]
-      point$pathogen_urb_onsite_flush[b[j]]<-HumanData$onsite_urb_flush[b[j]]*HumanData$survival_pit_flush_urb[b[j]]*UrbanOnsite2Water*(ExcretionHighHDI_child*NappyCor*HumanData$pop_urb_under5[b[j]]+ExcretionHighHDI_others*HumanData$pop_urb_over5[b[j]])/HumanData$storage_flush_urb[b[j]]
-      point$pathogen_rur_onsite_flush[b[j]]<-HumanData$onsite_rur_flush[b[j]]*HumanData$survival_pit_flush_rur[b[j]]*UrbanOnsite2Water*(ExcretionHighHDI_child*NappyCor*HumanData$pop_rur_under5[b[j]]+ExcretionHighHDI_others*HumanData$pop_rur_over5[b[j]])/HumanData$storage_flush_rur[b[j]]
+      point$pathogen_urb_con[subset[j]]<-HumanData$con_urb[subset[j]]*(excretion_child*NappyCor*HumanData$pop_urb_under5[subset[j]]+excretion_others*HumanData$pop_urb_over5[subset[j]])
+      point$pathogen_rur_con[subset[j]]<-HumanData$con_rur[subset[j]]*(excretion_child*NappyCor*HumanData$pop_rur_under5[subset[j]]+excretion_others*HumanData$pop_rur_over5[subset[j]])
+      point$pathogen_urb_dir[subset[j]]<-HumanData$dir_urb[subset[j]]*UrbanDirect2Water*(excretion_child*HumanData$pop_urb_under5[subset[j]]+excretion_others*HumanData$pop_urb_over5[subset[j]])
+      point$pathogen_rur_dir[subset[j]]<-HumanData$dir_rur[subset[j]]*RuralDirect2Water*(excretion_child*HumanData$pop_rur_under5[subset[j]]+excretion_others*HumanData$pop_rur_over5[subset[j]])
+      point$pathogen_urb_dif[subset[j]]<-HumanData$dif_urb[subset[j]]*UrbanDiffuse2Water*(excretion_child*HumanData$pop_urb_under5[subset[j]]+excretion_others*HumanData$pop_urb_over5[subset[j]])
+      point$pathogen_rur_dif[subset[j]]<-HumanData$dif_rur[subset[j]]*RuralDiffuse2Water*(excretion_child*HumanData$pop_rur_under5[subset[j]]+excretion_others*HumanData$pop_rur_over5[subset[j]])
+      point$pathogen_urb_onsite_treated[subset[j]]<-HumanData$onsite_urb_treated[subset[j]]*HumanData$survival_pit_empty_urb[subset[j]]*UrbanOnsite2Water*(excretion_child*NappyCor*HumanData$pop_urb_under5[subset[j]]+excretion_others*HumanData$pop_urb_over5[subset[j]])/HumanData$storage_empty_urb[subset[j]]
+      point$pathogen_rur_onsite_treated[subset[j]]<-HumanData$onsite_rur_treated[subset[j]]*HumanData$survival_pit_empty_rur[subset[j]]*UrbanOnsite2Water*(excretion_child*NappyCor*HumanData$pop_rur_under5[subset[j]]+excretion_others*HumanData$pop_rur_over5[subset[j]])/HumanData$storage_empty_rur[subset[j]]
+      point$pathogen_urb_onsite_water[subset[j]]<-HumanData$onsite_urb_water[subset[j]]*HumanData$survival_pit_empty_urb[subset[j]]*UrbanOnsite2Water*(excretion_child*NappyCor*HumanData$pop_urb_under5[subset[j]]+excretion_others*HumanData$pop_urb_over5[subset[j]])/HumanData$storage_empty_urb[subset[j]]
+      point$pathogen_rur_onsite_water[subset[j]]<-HumanData$onsite_rur_water[subset[j]]*HumanData$survival_pit_empty_rur[subset[j]]*UrbanOnsite2Water*(excretion_child*NappyCor*HumanData$pop_rur_under5[subset[j]]+excretion_others*HumanData$pop_rur_over5[subset[j]])/HumanData$storage_empty_rur[subset[j]]
+      point$pathogen_urb_onsite_land[subset[j]]<-HumanData$onsite_urb_land[subset[j]]*HumanData$survival_pit_empty_urb[subset[j]]*UrbanOnsite2Water*(excretion_child*NappyCor*HumanData$pop_urb_under5[subset[j]]+excretion_others*HumanData$pop_urb_over5[subset[j]])/HumanData$storage_empty_urb[subset[j]]
+      point$pathogen_rur_onsite_land[subset[j]]<-HumanData$onsite_rur_land[subset[j]]*HumanData$survival_pit_empty_rur[subset[j]]*UrbanOnsite2Water*(excretion_child*NappyCor*HumanData$pop_rur_under5[subset[j]]+excretion_others*HumanData$pop_rur_over5[subset[j]])/HumanData$storage_empty_rur[subset[j]]
+      point$pathogen_urb_onsite_flush[subset[j]]<-HumanData$onsite_urb_flush[subset[j]]*HumanData$survival_pit_flush_urb[subset[j]]*UrbanOnsite2Water*(excretion_child*NappyCor*HumanData$pop_urb_under5[subset[j]]+excretion_others*HumanData$pop_urb_over5[subset[j]])/HumanData$storage_flush_urb[subset[j]]
+      point$pathogen_rur_onsite_flush[subset[j]]<-HumanData$onsite_rur_flush[subset[j]]*HumanData$survival_pit_flush_rur[subset[j]]*UrbanOnsite2Water*(excretion_child*NappyCor*HumanData$pop_rur_under5[subset[j]]+excretion_others*HumanData$pop_rur_over5[subset[j]])/HumanData$storage_flush_rur[subset[j]]
       
       if(scenario$wwtp_available==3){
         
         #In this case all emissions from the connected population are not yet included in the emissions to water. These are added to the grids in the next step. Treatment has not been applied yet.
-        point$pathogen_urb_conforgrid[b[j]]<-point$pathogen_urb_con[b[j]]+point$pathogen_urb_onsite_treated[b[j]]
-        point$pathogen_rur_conforgrid[b[j]]<-point$pathogen_rur_con[b[j]]+point$pathogen_rur_onsite_treated[b[j]]
-        point$pathogen_urb_waterforgrid[b[j]]<-point$pathogen_urb_dir[b[j]]+point$pathogen_urb_onsite_water[b[j]]+point$pathogen_urb_onsite_flush[b[j]]
-        point$pathogen_rur_waterforgrid[b[j]]<-point$pathogen_rur_dir[b[j]]+point$pathogen_rur_onsite_water[b[j]]+point$pathogen_rur_onsite_flush[b[j]]
-        point$pathogen_urb_landforgrid[b[j]]<-point$pathogen_urb_dif[b[j]]+point$pathogen_urb_onsite_land[b[j]]
-        point$pathogen_rur_landforgrid[b[j]]<-point$pathogen_rur_dif[b[j]]+point$pathogen_rur_onsite_land[b[j]]
+        point$pathogen_urb_conforgrid[subset[j]]<-point$pathogen_urb_con[subset[j]]+point$pathogen_urb_onsite_treated[subset[j]]
+        point$pathogen_rur_conforgrid[subset[j]]<-point$pathogen_rur_con[subset[j]]+point$pathogen_rur_onsite_treated[subset[j]]
+        point$pathogen_urb_waterforgrid[subset[j]]<-point$pathogen_urb_dir[subset[j]]+point$pathogen_urb_onsite_water[subset[j]]+point$pathogen_urb_onsite_flush[subset[j]]
+        point$pathogen_rur_waterforgrid[subset[j]]<-point$pathogen_rur_dir[subset[j]]+point$pathogen_rur_onsite_water[subset[j]]+point$pathogen_rur_onsite_flush[subset[j]]
+        point$pathogen_urb_landforgrid[subset[j]]<-point$pathogen_urb_dif[subset[j]]+point$pathogen_urb_onsite_land[subset[j]]
+        point$pathogen_rur_landforgrid[subset[j]]<-point$pathogen_rur_dif[subset[j]]+point$pathogen_rur_onsite_land[subset[j]]
         
       } else{
         
         #In this case all emissions from the connected population go to the water after treatment.
-        point$pathogen_urb_conforgrid[b[j]]<-NA
-        point$pathogen_rur_conforgrid[b[j]]<-NA
-        point$pathogen_urb_waterforgrid[b[j]]<-point$pathogen_urb_con[b[j]]*HumanData$removalfraction[b[j]]+point$pathogen_urb_dir[b[j]]+point$pathogen_urb_onsite_treated[b[j]]*HumanData$removalfraction[b[j]]+point$pathogen_urb_onsite_water[b[j]]+point$pathogen_urb_onsite_flush[b[j]]
-        point$pathogen_rur_waterforgrid[b[j]]<-point$pathogen_rur_con[b[j]]*HumanData$removalfraction[b[j]]+point$pathogen_rur_dir[b[j]]+point$pathogen_rur_onsite_treated[b[j]]*HumanData$removalfraction[b[j]]+point$pathogen_rur_onsite_water[b[j]]+point$pathogen_rur_onsite_flush[b[j]]
-        point$pathogen_urb_landforgrid[b[j]]<-point$pathogen_urb_dif[b[j]]+point$pathogen_urb_onsite_land[b[j]]
-        point$pathogen_rur_landforgrid[b[j]]<-point$pathogen_rur_dif[b[j]]+point$pathogen_rur_onsite_land[b[j]]
+        point$pathogen_urb_conforgrid[subset[j]]<-NA
+        point$pathogen_rur_conforgrid[subset[j]]<-NA
+        point$pathogen_urb_waterforgrid[subset[j]]<-point$pathogen_urb_con[subset[j]]*HumanData$removalfraction[subset[j]]+point$pathogen_urb_dir[subset[j]]+point$pathogen_urb_onsite_treated[subset[j]]*HumanData$removalfraction[subset[j]]+point$pathogen_urb_onsite_water[subset[j]]+point$pathogen_urb_onsite_flush[subset[j]]
+        point$pathogen_rur_waterforgrid[subset[j]]<-point$pathogen_rur_con[subset[j]]*HumanData$removalfraction[subset[j]]+point$pathogen_rur_dir[subset[j]]+point$pathogen_rur_onsite_treated[subset[j]]*HumanData$removalfraction[subset[j]]+point$pathogen_rur_onsite_water[subset[j]]+point$pathogen_rur_onsite_flush[subset[j]]
+        point$pathogen_urb_landforgrid[subset[j]]<-point$pathogen_urb_dif[subset[j]]+point$pathogen_urb_onsite_land[subset[j]]
+        point$pathogen_rur_landforgrid[subset[j]]<-point$pathogen_rur_dif[subset[j]]+point$pathogen_rur_onsite_land[subset[j]]
         
       }
     }
-    rm(j)
   }
+
   
-  #for HDI low
-  if(length(a)>0){
-    for (j in 1:length(HumanData$iso[a])){
-      int<-integrate(f2,0,HumanData$storage_empty_urb[a[j]])
-      HumanData$survival_pit_empty_urb[a[j]]<-int$value/HumanData$storage_empty_urb[a[j]]
-      int<-integrate(f2,0,HumanData$storage_empty_rur[a[j]])
-      HumanData$survival_pit_empty_rur[a[j]]<-int$value/HumanData$storage_empty_rur[a[j]]
-      
-      int1<-integrate(f2,0,HumanData$storage_flush_urb[a[j]])
-      HumanData$survival_pit_flush_urb[a[j]]<-int1$value/HumanData$storage_flush_urb[a[j]]
-      int1<-integrate(f2,0,HumanData$storage_flush_rur[a[j]])
-      HumanData$survival_pit_flush_rur[a[j]]<-int1$value/HumanData$storage_flush_rur[a[j]]
-      
-      point$pathogen_urb_con[a[j]]<-HumanData$con_urb[a[j]]*(ExcretionLowHDI_child*NappyCor*HumanData$pop_urb_under5[a[j]]+ExcretionLowHDI_others*HumanData$pop_urb_over5[a[j]])
-      point$pathogen_rur_con[a[j]]<-HumanData$con_rur[a[j]]*(ExcretionLowHDI_child*NappyCor*HumanData$pop_rur_under5[a[j]]+ExcretionLowHDI_others*HumanData$pop_rur_over5[a[j]])
-      point$pathogen_urb_dir[a[j]]<-HumanData$dir_urb[a[j]]*UrbanDirect2Water*(ExcretionLowHDI_child*HumanData$pop_urb_under5[a[j]]+ExcretionLowHDI_others*HumanData$pop_urb_over5[a[j]])
-      point$pathogen_rur_dir[a[j]]<-HumanData$dir_rur[a[j]]*RuralDirect2Water*(ExcretionLowHDI_child*HumanData$pop_rur_under5[a[j]]+ExcretionLowHDI_others*HumanData$pop_rur_over5[a[j]])
-      point$pathogen_urb_dif[a[j]]<-HumanData$dif_urb[a[j]]*UrbanDiffuse2Water*(ExcretionLowHDI_child*HumanData$pop_urb_under5[a[j]]+ExcretionLowHDI_others*HumanData$pop_urb_over5[a[j]])
-      point$pathogen_rur_dif[a[j]]<-HumanData$dif_rur[a[j]]*RuralDiffuse2Water*(ExcretionLowHDI_child*HumanData$pop_rur_under5[a[j]]+ExcretionLowHDI_others*HumanData$pop_rur_over5[a[j]])
-      point$pathogen_urb_onsite_treated[a[j]]<-HumanData$onsite_urb_treated[a[j]]*HumanData$survival_pit_empty_urb[a[j]]*UrbanOnsite2Water*(ExcretionLowHDI_child*NappyCor*HumanData$pop_urb_under5[a[j]]+ExcretionLowHDI_others*HumanData$pop_urb_over5[a[j]])/HumanData$storage_empty_urb[a[j]]
-      point$pathogen_rur_onsite_treated[a[j]]<-HumanData$onsite_rur_treated[a[j]]*HumanData$survival_pit_empty_rur[a[j]]*UrbanOnsite2Water*(ExcretionLowHDI_child*NappyCor*HumanData$pop_rur_under5[a[j]]+ExcretionLowHDI_others*HumanData$pop_rur_over5[a[j]])/HumanData$storage_empty_rur[a[j]]
-      point$pathogen_urb_onsite_water[a[j]]<-HumanData$onsite_urb_water[a[j]]*HumanData$survival_pit_empty_urb[a[j]]*UrbanOnsite2Water*(ExcretionLowHDI_child*NappyCor*HumanData$pop_urb_under5[a[j]]+ExcretionLowHDI_others*HumanData$pop_urb_over5[a[j]])/HumanData$storage_empty_urb[a[j]]
-      point$pathogen_rur_onsite_water[a[j]]<-HumanData$onsite_rur_water[a[j]]*HumanData$survival_pit_empty_rur[a[j]]*UrbanOnsite2Water*(ExcretionLowHDI_child*NappyCor*HumanData$pop_rur_under5[a[j]]+ExcretionLowHDI_others*HumanData$pop_rur_over5[a[j]])/HumanData$storage_empty_rur[a[j]]
-      point$pathogen_urb_onsite_land[a[j]]<-HumanData$onsite_urb_land[a[j]]*HumanData$survival_pit_empty_urb[a[j]]*UrbanOnsite2Water*(ExcretionLowHDI_child*NappyCor*HumanData$pop_urb_under5[a[j]]+ExcretionLowHDI_others*HumanData$pop_urb_over5[a[j]])/HumanData$storage_empty_urb[a[j]]
-      point$pathogen_rur_onsite_land[a[j]]<-HumanData$onsite_rur_land[a[j]]*HumanData$survival_pit_empty_rur[a[j]]*UrbanOnsite2Water*(ExcretionLowHDI_child*NappyCor*HumanData$pop_rur_under5[a[j]]+ExcretionLowHDI_others*HumanData$pop_rur_over5[a[j]])/HumanData$storage_empty_rur[a[j]]
-      point$pathogen_urb_onsite_flush[a[j]]<-HumanData$onsite_urb_flush[a[j]]*HumanData$survival_pit_flush_urb[a[j]]*UrbanOnsite2Water*(ExcretionLowHDI_child*NappyCor*HumanData$pop_urb_under5[a[j]]+ExcretionLowHDI_others*HumanData$pop_urb_over5[a[j]])/HumanData$storage_flush_urb[a[j]]
-      point$pathogen_rur_onsite_flush[a[j]]<-HumanData$onsite_rur_flush[a[j]]*HumanData$survival_pit_flush_rur[a[j]]*UrbanOnsite2Water*(ExcretionLowHDI_child*NappyCor*HumanData$pop_rur_under5[a[j]]+ExcretionLowHDI_others*HumanData$pop_rur_over5[a[j]])/HumanData$storage_flush_rur[a[j]]
-      
-      if(scenario$wwtp_available==3){
-        
-        #In this case all emissions from the connected population are not yet included in the emissions to water. These are added to the grids in the next step. Treatment has not been applied yet.
-        point$pathogen_urb_conforgrid[a[j]]<-point$pathogen_urb_con[a[j]]+point$pathogen_urb_onsite_treated[a[j]]
-        point$pathogen_rur_conforgrid[a[j]]<-point$pathogen_rur_con[a[j]]+point$pathogen_rur_onsite_treated[a[j]]
-        point$pathogen_urb_waterforgrid[a[j]]<-point$pathogen_urb_dir[a[j]]+point$pathogen_urb_onsite_water[a[j]]+point$pathogen_urb_onsite_flush[a[j]]
-        point$pathogen_rur_waterforgrid[a[j]]<-point$pathogen_rur_dir[a[j]]+point$pathogen_rur_onsite_water[a[j]]+point$pathogen_rur_onsite_flush[a[j]]
-        point$pathogen_urb_landforgrid[a[j]]<-point$pathogen_urb_dif[a[j]]+point$pathogen_urb_onsite_land[a[j]]
-        point$pathogen_rur_landforgrid[a[j]]<-point$pathogen_rur_dif[a[j]]+point$pathogen_rur_onsite_land[a[j]]
-        
-      }else{
-        
-        #In this case all emissions from the connected population go to the water after treatment.
-        point$pathogen_urb_conforgrid[a[j]]<-NA
-        point$pathogen_rur_conforgrid[a[j]]<-NA
-        point$pathogen_urb_waterforgrid[a[j]]<-point$pathogen_urb_con[a[j]]*HumanData$removalfraction[a[j]]+point$pathogen_urb_dir[a[j]]+point$pathogen_urb_onsite_treated[a[j]]*HumanData$removalfraction[a[j]]+point$pathogen_urb_onsite_water[a[j]]+point$pathogen_urb_onsite_flush[a[j]]
-        point$pathogen_rur_waterforgrid[a[j]]<-point$pathogen_rur_con[a[j]]*HumanData$removalfraction[a[j]]+point$pathogen_rur_dir[a[j]]+point$pathogen_rur_onsite_treated[a[j]]*HumanData$removalfraction[a[j]]+point$pathogen_rur_onsite_water[a[j]]+point$pathogen_rur_onsite_flush[a[j]]
-        point$pathogen_urb_landforgrid[a[j]]<-point$pathogen_urb_dif[a[j]]+point$pathogen_urb_onsite_land[a[j]]
-        point$pathogen_rur_landforgrid[a[j]]<-point$pathogen_rur_dif[a[j]]+point$pathogen_rur_onsite_land[a[j]]
-        
-        #to make sure these fractions are added correctly to the output file
-        point$pathogen_urb_con[a[j]]<-point$pathogen_urb_con[a[j]]*HumanData$removalfraction[a[j]]
-        point$pathogen_rur_con[a[j]]<-point$pathogen_rur_con[a[j]]*HumanData$removalfraction[a[j]]
-        
-      }
-    }
-  }
-  return(point)
+  return(list(human=HumanData, emissions=emissions))
 }
 
 calc.pop.emissions <- function(emissions,HumanData){
@@ -517,3 +475,6 @@ calc.emissions.grid <- function(isoraster,iso,emissions_forgrid_pp,pop_grid){
   return(pathogen_grid)
 }
 
+f <- function(a){
+  a$b <- 10
+}
