@@ -5,7 +5,7 @@ population.preprocess <- function(){
   #read
   popurban_grid<-raster(file.path(SCENARIO$model_input,SCENARIO$population_urban_filename))
   poprural_grid<-raster(file.path(SCENARIO$model_input,SCENARIO$population_rural_filename))
-  populations <- list(urban=poprural_grid,rural=poprural_grid)
+  populations <- list(urban=popurban_grid,rural=poprural_grid)
   # validate
   population.validate(populations)
   extent <- extent(ISORASTER)
@@ -30,6 +30,7 @@ population.validate <-function(populations){
 }
 
 population.correct <- function(populations){
+  browser()
   library(dplyr)
   all_data <- data.frame(Urban = values(populations$urban),Rural = values(populations$rural),ISO = values(ISORASTER))
   summed <- all_data %>%
