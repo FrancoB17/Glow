@@ -130,7 +130,7 @@ wwtp.calc.treatment <- function(pathogen,emissions,wwtp_inputs){
   wwtp_inputs$emissions_per_WWTP_onsite_rur <- wwtp_inputs$fcapacity*(sum((emissions$pathogen_rur_conforgrid*(1-emissions$pathogen_rur_fconsewer)),na.rm=TRUE))*(1-wwtp_inputs$removalfraction_onsite)
   wwtp_inputs$emissions_per_WWTP <- wwtp_inputs$emissions_per_WWTP_sewer_urb+wwtp_inputs$emissions_per_WWTP_sewer_rur+wwtp_inputs$emissions_per_WWTP_onsite_urb+wwtp_inputs$emissions_per_WWTP_onsite_rur
   
-  print("Warning: currently average treatment coverage and efficiency are used. No link is yet established with the pathogen flow tool")
+  log_warn("Warning: currently average treatment coverage and efficiency are used. No link is yet established with the pathogen flow tool")
   
   WWTP_emissions_per_subarea<-array(dim=c(length(unique(wwtp_inputs$subarea)),5))
   colnames(WWTP_emissions_per_subarea)<-c("subarea","sewer_urb","sewer_rur","onsite_urb","onsite_rur")

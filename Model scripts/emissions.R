@@ -9,7 +9,6 @@ emissions.calc.avg.pp <- function(emissions){
 }
 
 emissions.na.replace <- function(emissions,fill=0){
-  browser()
   cols <- c("pathogen_urb_conforgrid","pathogen_rur_conforgrid","pathogen_urb_waterforgrid","pathogen_rur_waterforgrid","pathogen_urb_landforgrid","pathogen_rur_landforgrid",
             "pathogen_urb_con","pathogen_rur_con","pathogen_urb_onsite_land","pathogen_rur_onsite_land","pathogen_urb_dif","pathogen_rur_dif")
   for(col_name in cols){
@@ -22,7 +21,7 @@ emissions.na.replace <- function(emissions,fill=0){
 }
 
 emissions.calc.fconsewer <- function(emissions){
-  browser()
+
   emissions$pathogen_urb_fconsewer<-0
   emissions$pathogen_rur_fconsewer<-0
   

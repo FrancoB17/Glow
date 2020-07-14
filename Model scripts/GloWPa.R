@@ -82,7 +82,6 @@ glowpa.run <- function(scenario,human_data){
     #OUTPUT$emissions <<- emissions.calc.fconsewer(OUTPUT$emissions)
     wwtp_output <- wwtp.run(OUTPUT$emissions, pathogen, populations$urban, populations$rural)
     OUTPUT$emissions <<- wwtp_output$emissions
-    browser()
     OUTPUT$grid <<- wwtp_output$grid
     if(SCENARIO$hydrology_available){
       stop("ERROR: Hydrology not implemented in this version")
@@ -111,13 +110,13 @@ glowpa.run <- function(scenario,human_data){
       OUTPUT$emissions <<- totals
     }
     # save geotiff
-    browser()
     OUTPUT$grid$pathogen_water[OUTPUT$grid$pathogen_water==0]<-NA
     out_file <- file.path(SCENARIO$model_output,sprintf("humanemissions_%s%s.tif",pathogen$name,SCENARIO$run))
     log_info("Writing raster output")
     writeRaster(OUTPUT$grid$pathogen_water,out_file,format="GTiff",overwrite=TRUE)
     OUTPUT$files$pathogen_water_grid <<- out_file 
     STATE <<- "finished"
+    log_info("finished scenario run with id {SCENARIO$run}")
   }, warning = function(warning_condition) {
     log_warn("{warning_condition}")
   }, error = function(error_condition) {

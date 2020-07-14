@@ -1,14 +1,14 @@
 
-
 logger.init <- function(log_file=NULL){
   #log_appender(appender_console)
-  # if(!is.null(log_file)){
-  #   if(!dir.exists(dirname(log_file))){
-  #     dir.create(dirname(log_file))
-  #     file.create(log_file)
-  #   }
-  #   log_appender(appender_file(log_file))
-  # }
+  if(!is.null(log_file)){
+    if(!dir.exists(dirname(log_file))){
+      dir.create(dirname(log_file))
+      file.create(log_file)
+    }
+    log_appender(appender_file(log_file))
+  }
+  log_appender(appender_console)
   log_format <- layout_glue_generator(format = '{level} {time} {namespace}/{fn}: {msg}')
   log_layout(log_format)
   log_threshold(INFO)

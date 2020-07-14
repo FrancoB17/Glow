@@ -261,7 +261,7 @@ pathogenflow.wwtp <- function(emissions){
   for(area_type in c("urb","rur")){
     emissions[[sprintf("to_sewerage_flushSewer_%s_out",area_type)]] <- emissions[[sprintf("pathogen_%s_WWTP_sewer",area_type)]]
     for(jmp_type in c("flushSeptic","flushPit","flushOpen","flushUnknown","pitSlab","pitNoSlab","compostingTwinSlab","compostingTwinNoSlab","compostingToilet","bucketLatrine","containerBased","other")){
-      print(jmp_type)
+      
       col_name_target <- sprintf("to_fecalSludge_%s_%s_out",jmp_type,area_type)
       col_name_source <- sprintf("pathogen_%s_WWTP_onsite",area_type)
       col_name_factor <- sprintf("pathogen_%s_fonsite_%s",area_type,jmp_type)
@@ -272,7 +272,6 @@ pathogenflow.wwtp <- function(emissions){
 }
 
 pathogenflow.calc.totals <- function(emissions){
-  browser()
   log_info("Calculating totals emissions per jmp sanition types")
   totals <- data.frame(matrix(nrow=nrow(emissions),ncol=0))
   totals$iso <- emissions$iso
