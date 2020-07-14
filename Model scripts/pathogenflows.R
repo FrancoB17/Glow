@@ -61,7 +61,6 @@ pathogenflow.run <- function(pathogen){
       }
     }
   }
-  browser()
   HUMAN_DATA$removalfraction<-1-(HUMAN_DATA$FractionPrimarytreatment*pathogen$RemovalPrimary+HUMAN_DATA$FractionSecondarytreatment*pathogen$RemovalSecondary+
                                      HUMAN_DATA$FractionTertiarytreatment*pathogen$RemovalTertiary+HUMAN_DATA$FractionQuaternarytreatment*pathogen$RemovalQuaternary+HUMAN_DATA$FractionPonds*pathogen$RemovalPonds)  
     
@@ -267,7 +266,6 @@ pathogenflow.get.input <- function(area_type,human_type){
 pathogenflow.wwtp <- function(emissions){
   log_info("Applying WWTP for pathogenflow emissions ")
   for(area_type in c("urb","rur")){
-    browser()
     emissions[[sprintf("to_sewerage_flushSewer_%s_out",area_type)]] <- emissions[[sprintf("pathogen_%s_WWTP_sewer",area_type)]]
     for(jmp_type in c("flushSeptic","flushPit","flushOpen","flushUnknown","pitSlab","pitNoSlab","compostingTwinSlab","compostingTwinNoSlab","compostingToilet","bucketLatrine","containerBased","other")){
       col_name_target <- sprintf("to_fecalSludge_%s_%s_out",jmp_type,area_type)

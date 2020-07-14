@@ -80,7 +80,6 @@ glowpa.run <- function(scenario,human_data){
     OUTPUT$emissions <<- emissions.na.replace(OUTPUT$emissions)
     # estimate fraction of connected and land emissions for the different systems to later do source tracking
     #OUTPUT$emissions <<- emissions.calc.fconsewer(OUTPUT$emissions)
-    browser()
     wwtp_output <- wwtp.run(OUTPUT$emissions, pathogen, populations$urban, populations$rural)
     OUTPUT$emissions <<- wwtp_output$emissions
     OUTPUT$grid <<- wwtp_output$grid
@@ -107,7 +106,6 @@ glowpa.run <- function(scenario,human_data){
       detach("package:dplyr", unload=TRUE)
     }
     else if(SCENARIO$loadings_module==2){
-      browser()
       totals <- pathogenflow.calc.totals(OUTPUT$emissions)
       OUTPUT$emissions <<- totals
     }

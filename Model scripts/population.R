@@ -30,7 +30,6 @@ population.validate <-function(populations){
 }
 
 population.correct <- function(populations){
-  browser()
   library(dplyr)
   all_data <- data.frame(Urban = values(populations$urban),Rural = values(populations$rural),ISO = values(ISORASTER))
   summed <- all_data %>%
