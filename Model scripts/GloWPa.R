@@ -1,12 +1,14 @@
 #' Main file for GloWPa model
 
 # LIBRARIES
-
 library(raster)
+library(logger)
 
 # SOURCE FILES
 source("./Model scripts/population.R")
-source("./Model_scripts/wwtp.R")
+source("./Model scripts/wwtp.R")
+source("./Model scripts/logger.R")
+source("./Model scripts/emissions.R")
 
 #' SCENARIO 
 #' run:                 identifier of scenario run
@@ -34,65 +36,105 @@ SCENARIO <<- data.frame(
 
 STATE <<- "not started"
 
-glowpa.run <- function(config,human_data){
-  # TODO: merge config with global scenario options
-  STATE <<- "running"
-  ISORASTER <<- raster(file.path(SCENARIO$model_input,SCENARIO$isoraster_filename))
-  HUMAN_DATA <<- human_data
-  OUTPUT <<- list(emissions=NULL,grids=NULL,files=list())
-  # AREA_EXTENT <<- extent(ISORASTER)
-  pathogen_inputs <- read.csv(file="./Model input/pathogen_inputs.csv", stringsAsFactors = FALSE)
-  # search pathogen information
-  pathogen_row <- which(pathogen_inputs$name==scenario$pathogen)
-  if(length(pathogen_row)<1){
-    stop("Error: pathogen misspelled or not in list")
-  }
-  pathogen <- pathogen_inputs[pathogen_row,]
-  populations <- population.preprocess()
-  if(SCENARIO$loadings_module==1){
-    stop("ERROR: Human emissions module not yet implemented in this version.")
-  }
-  else if(SCENARIO$loadings_module==2){
-    source("./Model scripts/pathogenflows.R")
-    OUTPUT$emissions <<- pathogenflows.run(pathogen)
-  }
+glowpa.run <- function(scenario,human_data){
+  # merge defaults for scenario with scenario
+  result = tryCatch({
+    SCENARIO <<- glowpa.get.params(scenario)
+    log_file <- file.path(SCENARIO$model_output,sprintf("logs/log_run%s_pid%s.txt",SCENARIO$run, Sys.getpid()))
+    logger.init(log_file)
+    log_info('Start scenario run with id {SCENARIO$run}')
+    params_table <- ""
+    for(par in colnames(SCENARIO)){
+      par_value <- SCENARIO[[par]]
+      entry <- sprintf("%s= %s\n",par,par_value)
+      params_table <- paste(params_table,entry)
+    }
+    log_info('Model started with following params:\n{params_table}')
+    
+    STATE <<- "running"
+    ISORASTER <<- raster(file.path(SCENARIO$model_input,SCENARIO$isoraster_filename))
+    HUMAN_DATA <<- human_data
+    OUTPUT <<- list(emissions=NULL,grid=NULL,files=list())
+    # AREA_EXTENT <<- extent(ISORASTER)
+    pathogen_inputs <- read.csv(file.path(SCENARIO$model_input,"pathogen_inputs.csv"), stringsAsFactors = FALSE)
+    # search pathogen information
+    pathogen_row <- which(pathogen_inputs$name==SCENARIO$pathogen)
+    if(length(pathogen_row)<1){
+      log_error("No pathogen information found for pathogen {SCENARIO$pathogen}")
+      stop()
+    }
+    pathogen <- pathogen_inputs[pathogen_row,]
+    populations <- population.preprocess()
+    if(SCENARIO$loadings_module==1){
+      log_error("Human emissions module not yet implemented in this version.")
+      stop()
+    }
+    else if(SCENARIO$loadings_module==2){
+      source("./Model scripts/pathogenflows.R")
+      OUTPUT$emissions <<- pathogenflow.run(pathogen)
+    }
+    
+    #calculate emissions pp
+    OUTPUT$emissions <<- emissions.calc.avg.pp(OUTPUT$emissions)
+    # replace na values with 0
+    OUTPUT$emissions <<- emissions.na.replace(OUTPUT$emissions)
+    # estimate fraction of connected and land emissions for the different systems to later do source tracking
+    #OUTPUT$emissions <<- emissions.calc.fconsewer(OUTPUT$emissions)
+    wwtp_output <- wwtp.run(OUTPUT$emissions, pathogen, populations$urban, populations$rural)
+    OUTPUT$emissions <<- wwtp_output$emissions
+    browser()
+    OUTPUT$grid <<- wwtp_output$grid
+    if(SCENARIO$hydrology_available){
+      stop("ERROR: Hydrology not implemented in this version")
+    }
+    else if(SCENARIO$loadings_module==1){
+      # TODO: think about moving this to human_emissions.R specific code.
+      OUTPUT$grid$pathogen_land <<-0.025*OUTPUT$grid$pathogen_land
+      OUTPUT$grid$pathogen_water <<- OUTPUT$grid$pathogen_water + OUTPUT$grid$pathogen_land
+      OUTPUT$emissions$pathogen_urb_dif <<-0.025*OUTPUT$emissions$pathogen_urb_dif
+      OUTPUT$emissions$pathogen_rur_dif <<-0.025*OUTPUT$emissions$pathogen_rur_dif
+      OUTPUT$emissions$pathogen_urb_onsite_land <<-0.025*OUTPUT$emissions$pathogen_urb_onsite_land
+      OUTPUT$emissions$pathogen_rur_onsite_land <<-0.025*OUTPUT$emissions$pathogen_rur_onsite_land
+      # save in asci grid format
+      writeRaster(OUTPUT$grid$pathogen_water,file.path(SCENARIO$model_output,sprintf("humanemissions_%s%s",pathogen$name,SCENARIO$run)), format="ascii", overwrite=TRUE)
+      
+      library(tidyverse)
+      library(dplyr)
+      # save emissions to csv
+      selection <- emissions %>% select(1:16)
+      write.csv(selection, file=file.path(SCENARIO$model_output,sprintf("HumanEmissionsCalculated_%s%s.csv",pathogen$name,SCENARIO$run)))
+      detach("package:tidyverse", unload=TRUE)
+      detach("package:dplyr", unload=TRUE)
+    }
+    else if(SCENARIO$loadings_module==2){
+      totals <- pathogenflow.calc.totals(OUTPUT$emissions)
+      OUTPUT$emissions <<- totals
+    }
+    # save geotiff
+    browser()
+    OUTPUT$grid$pathogen_water[OUTPUT$grid$pathogen_water==0]<-NA
+    out_file <- file.path(SCENARIO$model_output,sprintf("humanemissions_%s%s.tif",pathogen$name,SCENARIO$run))
+    log_info("Writing raster output")
+    writeRaster(OUTPUT$grid$pathogen_water,out_file,format="GTiff",overwrite=TRUE)
+    OUTPUT$files$pathogen_water_grid <<- out_file 
+    STATE <<- "finished"
+  }, warning = function(warning_condition) {
+    log_warn("{warning_condition}")
+  }, error = function(error_condition) {
+   log_error("{error_condition}")
+  })
   
-  wwtp_output <- wttp.run(OUTPUT$emissions, pathogen, populations$urban, populations$rural)
-  OUTPUT$emissions <<- wttp_output$emissions
-  OUTPUT$grid <<- wttp_output$grid
-  if(SCENARIO$hydrology_available){
-    stop("ERROR: Hydrology not implemented in this version")
-  }
-  else if(SCENARIO$loadings_module==1){
-    OUTPUT$grid$pathogen_land_grid <<-0.025*OUTPUT$grid$pathogen_land_grid
-    OUTPUT$grid$pathogen_water_grid <<- OUTPUT$grid$pathogen_water_grid + OUTPUT$grid$pathogen_land_grid
-    OUTPUT$emissions$pathogen_urb_dif <<-0.025*OUTPUT$emissions$pathogen_urb_dif
-    OUTPUT$emissions$pathogen_rur_dif <<-0.025*OUTPUT$emissions$pathogen_rur_dif
-    OUTPUT$emissions$pathogen_urb_onsite_land <<-0.025*OUTPUT$emissions$pathogen_urb_onsite_land
-    OUTPUT$emissions$pathogen_rur_onsite_land <<-0.025*OUTPUT$emissions$pathogen_rur_onsite_land
-    # save in asci grid format
-    writeRaster(OUTPUT$grid$pathogen_water_grid,file.path(SCENARIO$model_output,sprintf("humanemissions_%s%s",pathogen$name,SCENARIO$run)), format="ascii", overwrite=TRUE)
-  }
-  else if(SCENARIO$loadings_module==2){
-    # TODO:
-  }
-  # save geotiff
-  OUTPUT$grid$pathogen_water_grid[OUTPUT$grid$pathogen_water_grid==0]<-NA
-  out_file <- file.path(SCENARIO$model_output,sprintf("humanemissions_%s%s",pathogen$name,SCENARIO$run))
-  writeRaster(OUTPUT$grid$pathogen_water_grid,out_file,format="GTiff",overwrite=TRUE)
-  OUTPUT$files$pathogen_water_grid <<- out_file 
-  
-  library(tidyverse)
-  library(dplyr)
-  # TODO: I think we need other routine here.
-  # TODO: select data for output
-  selection <- point %>% select(1:16)
-  write.csv(selection, file=file.path(SCENARIO$model_output,sprintf("HumanEmissionsCalculated_%s%s.csv",pathogen$name,SCENARIO$run)))
-  detach("package:tidyverse", unload=TRUE)
-  detach("package:dplyr", unload=TRUE)
   return(OUTPUT)
 }
 
 
-
+glowpa.get.params <- function(scenario){
+  # merge defaults in scenario
+  for(col in colnames(SCENARIO)){
+    if(!col %in% colnames(scenario)){
+      scenario[[col]] <- SCENARIO[[col]]
+    }
+  }
+  return(scenario)
+}
 
