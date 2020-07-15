@@ -34,3 +34,15 @@ In case anything needs to be changed in the submodule code make sure you make ch
 5. Go to GloWPa git 
 6. Update submodule: `git submodule update`
 7. Now the submodule reference code has been updated and needs to be committed to the GloWPa repository: `git commit -a -m "Updated submodule"`
+
+## Running the model
+
+### With local data
+TODO
+### Using API and remote data
+
+1. Install plumber: `install.packages(plumber)`
+2. Type: `api <- plump("api.R")` and then `api$run()`
+3. Check the swagger specification for the endpoints.
+4. Do POST call to ${baseurl}/scenario and provide data
+
