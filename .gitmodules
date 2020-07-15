@@ -1,0 +1,6 @@
+[submodule "pathogenflows"]
+	path = pathogenflows
+	url = https://git.wur.nl/glowpa/pathogenflows.git
+[submodule "libs/pathogenflows"]
+	path = libs/pathogenflows
+	url = https://git.wur.nl/glowpa/pathogenflows.git
