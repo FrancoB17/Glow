@@ -1,11 +1,6 @@
 
-wwtp.run <- function(emissions,pathogen,popurban_grid,poprural_grid){
+wwtp.run <- function(emissions,pathogen,popurban_grid,poprural_grid,wwtp_inputs=NULL){
   if(SCENARIO$wwtp_available ==3){
-    fname <- SCENARIO$WWTPData_filename
-    if(!endsWith(fname,".csv")){
-      fname <- sprintf("%s.csv",SCENARIO$WWTPData_filename)
-    }
-    wwtp_inputs <- read.csv(file.path(SCENARIO$model_input,fname), stringsAsFactors = F)
     if(SCENARIO$loadings_module == 1){
       # TODO: move this to human_emissions
       emissions$pathogen_urb_fconsewer<-0

@@ -1,10 +1,7 @@
 #' This script contains functions regarding the population data processing
 
-population.preprocess <- function(){
+population.preprocess <- function(popurban_grid,poprural_grid){
   log_info("Preprocessig population data.")
-  #read
-  popurban_grid<-raster(file.path(SCENARIO$model_input,SCENARIO$population_urban_filename))
-  poprural_grid<-raster(file.path(SCENARIO$model_input,SCENARIO$population_rural_filename))
   populations <- list(urban=popurban_grid,rural=poprural_grid)
   # validate
   population.validate(populations)
