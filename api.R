@@ -27,9 +27,9 @@ function(human_data,isoraster,popurban,poprural,wwtp){
   dir.create(model_ouput,recursive = T,showWarnings = F)
   scenario <- data.frame(pathogen="cryptosporidium",model_output = model_ouput, resolution=0.008333, loadings_module=2,wwtp_available=3,run=1)
   glowpa_output <- glowpa.run(scenario,human_data,isoraster_grid,popurban_grid,poprural_grid,wwtp_input)
-  # overwrite raster with log values
-  glowpa_output$grid$pathogen_water <- log(glowpa_output$grid$pathogen_water)
-  writeRaster(log(glowpa_output$grid$pathogen_water),filename = glowpa_output$files$pathogen_water_grid, overwrite=T)
+  # overwrite raster with log10 values
+  glowpa_output$grid$pathogen_water <- log10(glowpa_output$grid$pathogen_water)
+  writeRaster(glowpa_output$grid$pathogen_water,filename = glowpa_output$files$pathogen_water_grid, overwrite=T)
   response <- list(grid=list(
     file=glowpa_output$files$pathogen_water_grid, 
     min=minValue(glowpa_output$grid$pathogen_water), 

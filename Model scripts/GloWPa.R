@@ -56,6 +56,7 @@ glowpa.run <- function(scenario,human_data,isoraster,popurban,poprural,wwtp_inpu
     ISORASTER <<- isoraster
     HUMAN_DATA <<- human_data
     OUTPUT <<- list(emissions=NULL,grid=NULL,files=list(pathogen_water_grid=NULL))
+    dir.create(SCENARIO$model_output,recursive = T,showWarnings = F)
     # AREA_EXTENT <<- extent(ISORASTER)
     pathogen_inputs <- read.csv(file.path(SCENARIO$model_input,"pathogen_inputs.csv"), stringsAsFactors = FALSE)
     # search pathogen information
