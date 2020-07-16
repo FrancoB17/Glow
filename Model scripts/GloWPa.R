@@ -39,7 +39,7 @@ STATE <<- "not started"
 
 glowpa.run <- function(scenario,human_data,isoraster,popurban,poprural,wwtp_input=NULL){
   # merge defaults for scenario with scenario
-  result = tryCatch({
+  result = withCallingHandlers({
     SCENARIO <<- glowpa.get.params(scenario)
     log_file <- file.path(SCENARIO$model_output,sprintf("logs/log_run%s_pid%s.txt",SCENARIO$run, Sys.getpid()))
     logger.init(log_file)
@@ -121,7 +121,7 @@ glowpa.run <- function(scenario,human_data,isoraster,popurban,poprural,wwtp_inpu
     log_info("finished scenario run with id {SCENARIO$run}")
     return(OUTPUT)
   }, warning = function(warning_condition) {
-    log_warn("{warning_condition}")
+    log_warn("{warning_condition$message}")
   }, error = function(error_condition) {
    log_error("{error_condition}")
   })

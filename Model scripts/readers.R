@@ -11,7 +11,7 @@ readers.read.raster <- function(file_name_or_url){
     #unlink(file.path("./downloads",Sys.getpid()),recursive = T)
   }
   else{
-    r <- raster(file.path(SCENARIO$model_input,file_name_or_url))
+    r <- raster(file_name_or_url)
   }
   return(r)
 }
@@ -23,11 +23,11 @@ readers.read.wwtp <- function(file_name_or_url){
     file_path <- file_name_or_url
   }
   else{
-    fname <- SCENARIO$WWTPData_filename
+    fname <- file_name_or_url
     if(!endsWith(fname,".csv")){
-      fname <- sprintf("%s.csv",SCENARIO$WWTPData_filename)
+      fname <- sprintf("%s.csv",file_name_or_url)
     }
-    file_path <- file.path(SCENARIO$model_input,fname)
+    file_path <- fname
   }
   wwtp_inputs <- read.csv(file_path, stringsAsFactors = F)
   

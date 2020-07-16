@@ -50,14 +50,14 @@ pathogenflow.run <- function(pathogen){
         emissions_col_name_postfix <- sprintf("%s_%s",sanitation_type,area_type_code)
         emissions_col_to_surface <- sprintf("%s_%s","to_surface",emissions_col_name_postfix)
         emissions_col_sewerage <- sprintf("%s_%s","to_sewerage",emissions_col_name_postfix)
-        emissions_col_in_facal_sludge <-  sprintf("%s_%s","to_fecalSludge",emissions_col_name_postfix)
+        emissions_col_in_fecal_sludge <-  sprintf("%s_%s","to_fecalSludge",emissions_col_name_postfix)
         to_surface <- emissions_sanitation$toSurface[j]
         to_sewerage <- emissions_sanitation$sewerage[j]
         in_fecal_sludge <- emissions_sanitation$fecalSludge[j]
         # store only to_surface, to_sewerage and in_fecal_sludge
         emissions[[emissions_col_to_surface]][i] <- to_surface
         emissions[[emissions_col_sewerage]][i] <- to_sewerage
-        emissions[[emissions_col_in_facal_sludge]] <- in_fecal_sludge
+        emissions[[emissions_col_in_fecal_sludge]][i] <- in_fecal_sludge
       }
     }
   }
