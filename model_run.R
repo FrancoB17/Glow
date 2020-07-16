@@ -2,14 +2,8 @@
 #'
 
 rm(list = ls())
-# SET PATHS
-model_dir <- "/home/nauta/Data/Software/GloWPa/"
-model_input_dir <- "/home/nauta/Data/Projects/2020/K2P/02_Experiment/02_Runs/Run0/Input/kla_online/"
-model_output_dir <- "/home/nauta/Data/Projects/2020/K2P/02_Experiment/02_Runs/Run0/Output/"
-csv_sep <- ";"
-# ----
-
-setwd(model_dir)
+# SET your local settings in local_env.R
+source("local_env.R")
 source("./Model scripts/readers.R")
 source("./Model scripts/GloWPa.R")
 
