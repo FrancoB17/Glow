@@ -4,6 +4,8 @@ This version of the GloWPa model is prepared by Nynke on 23/4/2020. It is provid
 
 This version has not been thoroughly checked.
 
+<embed src="Model script schema 2017 v5.pdf" type="application/pdf">
+
 ## Installation
 
 Clone the git repository in your current folder and checkout mapping-tool branch:
