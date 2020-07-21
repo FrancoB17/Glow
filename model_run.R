@@ -3,11 +3,10 @@
 
 rm(list = ls())
 # SET your local settings in local_env.R
-source("local_env.R")
 source("./Model scripts/readers.R")
 source("./Model scripts/GloWPa.R")
 
-scenarios <- read.csv(file.path(model_input_dir,"overall_inputs.csv"),sep = csv_sep, stringsAsFactors = F)
+scenarios <- read.csv(file.path(model_input_dir,"overall_inputs.csv"),sep = ENV$csv_sep, stringsAsFactors = F)
 
 for(i in 1:dim(scenarios)[1]){
   scenario <- scenarios[i,]

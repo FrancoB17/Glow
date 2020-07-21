@@ -9,6 +9,9 @@ source("./Model scripts/population.R")
 source("./Model scripts/wwtp.R")
 source("./Model scripts/logger.R")
 source("./Model scripts/emissions.R")
+source("./Model scripts/plotter.R")
+source("./Model scripts/geo.R")
+source("./Model scripts/gadm.R")
 
 #' SCENARIO 
 #' run:                 identifier of scenario run
@@ -32,11 +35,14 @@ SCENARIO <<- data.frame(
   wwtp_available = 1,
   WWTPData_filename="",
   hydrology_available = FALSE,
-  resolution = 0.008333
+  resolution = 0.008333,stringsAsFactors = F
   )
 
 STATE <<- "not started"
-
+ENV <<- list(
+  csv_sep = ","
+)
+source("./local_env.R")
 glowpa.run <- function(scenario,human_data,isoraster,popurban,poprural,wwtp_input=NULL){
   # merge defaults for scenario with scenario
   result = withCallingHandlers({
@@ -117,6 +123,7 @@ glowpa.run <- function(scenario,human_data,isoraster,popurban,poprural,wwtp_inpu
     log_info("Writing raster output")
     writeRaster(OUTPUT$grid$pathogen_water,out_file,format="GTiff",overwrite=TRUE)
     OUTPUT$files$pathogen_water_grid = out_file 
+    
     STATE <<- "finished"
     log_info("finished scenario run with id {SCENARIO$run}")
     return(OUTPUT)

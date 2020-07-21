@@ -2,13 +2,9 @@
 readers.read.raster <- function(file_name_or_url){
   r <- NULL
   if(startsWith(file_name_or_url,"http")){
-    # TODO: download to temp
-    dest <- file.path("./downloads",Sys.getpid(), basename(file_name_or_url))
-    dirname <- dirname(dest)
-    dir.create(dirname,recursive = T,showWarnings = F)
+    dest <- tempfile()
     download.file(url = file_name_or_url,destfile = dest)
     r <- raster(dest)
-    #unlink(file.path("./downloads",Sys.getpid()),recursive = T)
   }
   else{
     r <- raster(file_name_or_url)
