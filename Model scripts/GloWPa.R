@@ -3,6 +3,8 @@
 # LIBRARIES
 library(raster)
 library(logger)
+library(tictoc)
+library(parallel)
 
 # SOURCE FILES
 source("./Model scripts/population.R")
@@ -44,6 +46,9 @@ ENV <<- list(
 )
 source("./local_env.R")
 glowpa.run <- function(scenario,human_data,isoraster,popurban,poprural,wwtp_input=NULL){
+  STATE <<- "running"
+  tic.clearlog()
+  tic("Total")
   # merge defaults for scenario with scenario
   result = withCallingHandlers({
     SCENARIO <<- glowpa.get.params(scenario)
@@ -58,7 +63,6 @@ glowpa.run <- function(scenario,human_data,isoraster,popurban,poprural,wwtp_inpu
     }
     log_info('Model started with following params:\n{params_table}')
     
-    STATE <<- "running"
     ISORASTER <<- isoraster
     HUMAN_DATA <<- human_data
     OUTPUT <<- list(emissions=NULL,grid=NULL,files=list(pathogen_water_grid=NULL))
@@ -72,14 +76,18 @@ glowpa.run <- function(scenario,human_data,isoraster,popurban,poprural,wwtp_inpu
       stop()
     }
     pathogen <- pathogen_inputs[pathogen_row,]
+    tic("preprocess population")
     populations <- population.preprocess(popurban,poprural)
+    toc(log=T)
     if(SCENARIO$loadings_module==1){
       log_error("Human emissions module not yet implemented in this version.")
       stop()
     }
     else if(SCENARIO$loadings_module==2){
       source("./Model scripts/pathogenflows.R")
+      tic("pathogen flow module")
       OUTPUT$emissions <<- pathogenflow.run(pathogen)
+      toc(log=T)
     }
     
     #calculate emissions pp
@@ -88,7 +96,9 @@ glowpa.run <- function(scenario,human_data,isoraster,popurban,poprural,wwtp_inpu
     # TODO: check if this is needed in all cases
     OUTPUT$emissions <<- emissions.na.replace(OUTPUT$emissions)
     # apply wwtp
+    tic("WWTP plan module")
     wwtp_output <- wwtp.run(OUTPUT$emissions, pathogen, populations$urban, populations$rural, wwtp_input)
+    toc(log=T)
     OUTPUT$emissions <<- wwtp_output$emissions
     OUTPUT$grid <<- wwtp_output$grid
     if(SCENARIO$hydrology_available){
@@ -123,16 +133,18 @@ glowpa.run <- function(scenario,human_data,isoraster,popurban,poprural,wwtp_inpu
     log_info("Writing raster output")
     writeRaster(OUTPUT$grid$pathogen_water,out_file,format="GTiff",overwrite=TRUE)
     OUTPUT$files$pathogen_water_grid = out_file 
-    
     STATE <<- "finished"
     log_info("finished scenario run with id {SCENARIO$run}")
-    return(OUTPUT)
   }, warning = function(warning_condition) {
     log_warn("{warning_condition$message}")
   }, error = function(error_condition) {
    log_error("{error_condition}")
   })
-  
+  toc(log=T)
+  log_times <- unlist(tic.log())
+  log_info("{log_times}")
+  unlink("./tmp",recursive = T)
+  return(OUTPUT)
 }
 
 

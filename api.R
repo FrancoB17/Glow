@@ -5,14 +5,23 @@ source("./Model scripts/readers.R")
 source("./Model scripts/GloWPa.R")
 
 #' @post /scenario
-function(human_data,isoraster,popurban,poprural,wwtp,level){
-  browser()
+function(human_data,isoraster,popurban,poprural,wwtp,level,wkt_extent){
+  # wkt_extent <-  "POLYGON ((29.5715 -1.48214, 35.00027 -1.48214, 35.00027 4.234466, 29.5715 4.234466, 29.5715 -1.48214))"
   # TODO: isoraster, population grids will be stored on server???
   if(missing(human_data) || missing(isoraster) || missing(popurban) || missing(poprural)){
     stop("Error: missing arguments")
   }
   human_data <- read.csv(text = human_data)
-  isoraster_grid <- readers.read.raster(isoraster)
+  cl <- makeCluster(detectCores())
+  clusterExport(cl,varlist = c('readers.read.raster','raster','log_info','tic','toc'))
+  grids <- parLapply(cl,list(iso=isoraster,urban=popurban,rural=poprural),fun = function(x){
+    readers.read.raster(x)
+  }) 
+  stopCluster(cl)
+  isoraster_grid <- grids$iso
+  poprural_grid <- grids$rural
+  popurban_grid <- grids$urban
+  #isoraster_grid <- readers.read.raster(isoraster)
   if(missing(level)){
     gadm_level <- 0
   }
@@ -21,9 +30,9 @@ function(human_data,isoraster,popurban,poprural,wwtp,level){
   }
  
   # implementation for new setup
-  if('gid' %in% colnames(human_data)){
+  if(!missing(wkt_extent)){
     # in this case gadm data will be read from the geopackage. 
-    boundaries <- geo.get.boundaries(level=gadm_level,gadm_gids = human_data$gid,gpkg_path=ENV$gadm_file)
+    boundaries <- geo.get.boundaries(level=gadm_level,gpkg_path=ENV$gadm_file,wkt_filter=wkt_extent)
   }
   # implementation for pilot case uganda. TODO: remove this part when data has been updated with new columns
   else{
@@ -33,8 +42,7 @@ function(human_data,isoraster,popurban,poprural,wwtp,level){
   }
   # crop isoraster
   isoraster_grid <- crop(isoraster_grid,boundaries)
-  popurban_grid <- readers.read.raster(popurban)
-  poprural_grid <- readers.read.raster(poprural)
+
   wwtp_input <- NULL
   if(!missing(wwtp)){
     wwtp_input <- readers.read.wwtp(wwtp)
@@ -55,9 +63,7 @@ function(human_data,isoraster,popurban,poprural,wwtp,level){
   glowpa_output$grid$pathogen_water <- log10(glowpa_output$grid$pathogen_water)
   writeRaster(glowpa_output$grid$pathogen_water,filename = glowpa_output$files$pathogen_water_grid, overwrite=T)
   brks<-c(-1,0,1,2,3,4,5,6,7,8,9,10,11,12,13,Inf)
-  browser()
   cols <- plotter.get.colors.khroma("discrete rainbow",14)
-  browser()
   plot_path <- plotter.plot.map(glowpa_output$grid$pathogen_water,col=cols,breaks=brks,boundaries=boundaries)
   response <- list(
     grid=list(
@@ -66,6 +72,7 @@ function(human_data,isoraster,popurban,poprural,wwtp,level){
       max=maxValue(glowpa_output$grid$pathogen_water)),
     figs = c(plot_path), 
     emissions=glowpa_output$emissions)
+  
   return(jsonlite::toJSON(response))
 }
 

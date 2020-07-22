@@ -1,9 +1,6 @@
 library(rgdal)
 library(sp)
 library(khroma)
-library(raster)
-library(rnaturalearth)
-library(rnaturalearthdata)
 
 plotter.plot.map <- function(grid,out_file,col, breaks,width,height,boundaries){
   if(missing(out_file)){

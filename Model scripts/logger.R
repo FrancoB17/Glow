@@ -2,9 +2,9 @@
 logger.init <- function(log_file=NULL){
   if(!is.null(log_file)){
     if(!dir.exists(dirname(log_file))){
-      dir.create(dirname(log_file))
-      file.create(log_file)
+      dir.create(dirname(log_file),recursive = T)
     }
+    file.create(log_file)
     log_appender(appender_file(log_file),index = 2)
   }
   log_appender(appender_console)

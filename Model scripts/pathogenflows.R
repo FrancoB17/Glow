@@ -1,4 +1,5 @@
 library(pathogenflows)
+
 session_info <- sessionInfo()
 log_info("Loaded package {session_info$otherPkgs$pathogenflows$Package}  {session_info$otherPkgs$pathogenflows$Version}")
 
@@ -10,22 +11,29 @@ pathogenflow.run <- function(pathogen){
   area_types <- c("urban","rural")
   human_age_types <- c("child","adult")
   
-  all_loadings <- list()
+  all_loadings <- list(rural=list(),urban=list())
   # 2) call loadings function 4 times for urban-adult/child prevalence and rural-adult/child prevalence
+  onsite_data <- list(urban=list(),rural=list())
   for(area_type in area_types){
-    for(human_age_type in human_age_types ){
-      #2a) prepare data for urban and rural
-      onsite_data <- pathogenflow.get.input(area_type,human_age_type)
-      # file_out <- file.path(SCENARIO$model_input,sprintf("onsite_%s_%s.csv",area_type,human_age_type))
-      # write.csv(onsite_data,file = file_out)
-      #call loadings
-      loadings <- pathogenflows::getLoadings(onsite_data,pathogenType)
-      # store in list
-      all_loadings[[area_type]][[human_age_type]] <- loadings
+    for(human_age_type in human_age_types){
+      onsite_data[[area_type]][[human_age_type]] <- pathogenflow.get.input(area_type,human_age_type)
     }
   }
-
+  tic("calc pathogenflows loadings")
+  cl <- makeCluster(detectCores())
+  loadings <- parLapply(cl,unlist(onsite_data,recursive = F),fun = function(x){
+    out <- pathogenflows::getLoadings(x)
+    return(out)
+  })
+  stopCluster(cl)
+  toc(log = T)
   # 3) postprocess output
+  for(calc_id in names(loadings)){
+    calc_combination <- unlist(strsplit(calc_id,split='.',fixed = T))
+    area_type <- calc_combination[1]
+    age_type <- calc_combination[2]
+    all_loadings[[area_type]][[age_type]] <- loadings[[calc_id]]
+  }
   # add child  + adult loadings for sanitation and areas
   # apply to area types urban/rural
   for(area_type in names(all_loadings)){
@@ -300,3 +308,4 @@ pathogenflow.calc.totals <- function(emissions){
   
   return(totals)
 }
+
