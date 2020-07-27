@@ -14,6 +14,7 @@ source("./Model scripts/emissions.R")
 source("./Model scripts/plotter.R")
 source("./Model scripts/geo.R")
 source("./Model scripts/gadm.R")
+source("./Model scripts/pathogen.R")
 
 #' SCENARIO 
 #' run:                 identifier of scenario run
@@ -28,7 +29,9 @@ source("./Model scripts/gadm.R")
 SCENARIO <<- data.frame(
   run = 1,
   loadings_module=1,
-  pathogen ="cryptosporidium",
+  pathogen ="rotavirus",
+  pathogenType = "Virus",
+  use_pathogen_file = TRUE,
   model_input ="./Model input", 
   model_output = "./Model output",
   isoraster_filename="isoraster.tiff",
@@ -37,12 +40,13 @@ SCENARIO <<- data.frame(
   wwtp_available = 1,
   WWTPData_filename="",
   hydrology_available = FALSE,
-  resolution = 0.008333,stringsAsFactors = F
+  resolution = 0.008333,stringsAsFactors = FALSE
   )
 
 STATE <<- "not started"
 ENV <<- list(
-  csv_sep = ","
+  csv_sep = ",",
+  master_node = Sys.getpid() # set master node. Used when parallel processes are running
 )
 source("./local_env.R")
 glowpa.run <- function(scenario,human_data,isoraster,popurban,poprural,wwtp_input=NULL){
@@ -67,15 +71,8 @@ glowpa.run <- function(scenario,human_data,isoraster,popurban,poprural,wwtp_inpu
     HUMAN_DATA <<- human_data
     OUTPUT <<- list(emissions=NULL,grid=NULL,files=list(pathogen_water_grid=NULL))
     dir.create(SCENARIO$model_output,recursive = T,showWarnings = F)
-    # AREA_EXTENT <<- extent(ISORASTER)
-    pathogen_inputs <- read.csv(file.path(SCENARIO$model_input,"pathogen_inputs.csv"), stringsAsFactors = FALSE)
     # search pathogen information
-    pathogen_row <- which(pathogen_inputs$name==SCENARIO$pathogen)
-    if(length(pathogen_row)<1){
-      log_error("No pathogen information found for pathogen {SCENARIO$pathogen}")
-      stop()
-    }
-    pathogen <- pathogen_inputs[pathogen_row,]
+    pathogen <- pathogen.get()
     tic("preprocess population")
     populations <- population.preprocess(popurban,poprural)
     toc(log=T)
@@ -143,7 +140,11 @@ glowpa.run <- function(scenario,human_data,isoraster,popurban,poprural,wwtp_inpu
   toc(log=T)
   log_times <- unlist(tic.log())
   log_info("{log_times}")
-  unlink("./tmp",recursive = T)
+  tmp_dir <- file.path("./tmp/",ENV$master_node)
+  if(dir.exists(tmp_dir)){
+    unlink(tmp_dir,recursive = T)
+  }
+  
   return(OUTPUT)
 }
 

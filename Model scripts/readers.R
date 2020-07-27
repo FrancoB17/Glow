@@ -3,10 +3,9 @@ readers.read.raster <- function(file_name_or_url){
   tic(sprintf("Read %s",file_name_or_url))
   r <- NULL
   if(startsWith(file_name_or_url,"http")){
-    if(!dir.exists("./tmp")){
-      dir.create("./tmp")
-    }
-    dest <- sprintf("./tmp/%s.tif",round(runif(1,1,10000)))
+    pid <- Sys.getpid()
+    dir.create(file.path("./tmp",ENV$master_node,pid),recursive = T)
+    dest <- sprintf(file.path("./tmp",ENV$master_node,pid,sprintf("%s.tif",round(runif(1,1,10000)))))
     log_info("Downloading raster from {file_name_or_url}")
     download.file(url = file_name_or_url,destfile = dest)
     r <- raster(dest)

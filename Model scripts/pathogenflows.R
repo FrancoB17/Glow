@@ -7,7 +7,7 @@ pathogenflow.run <- function(pathogen){
   log_info("Using Pathogenflows to calculate emissions")
   emissions <- data.frame(iso=HUMAN_DATA$iso,subarea=HUMAN_DATA$subarea)
   # 1) extract pathogen type from pathogen
-  pathogenType <- pathogen$pathogenType
+  pathogen_type <- pathogen$pathogenType
   area_types <- c("urban","rural")
   human_age_types <- c("child","adult")
   
@@ -16,7 +16,7 @@ pathogenflow.run <- function(pathogen){
   onsite_data <- list(urban=list(),rural=list())
   for(area_type in area_types){
     for(human_age_type in human_age_types){
-      onsite_data[[area_type]][[human_age_type]] <- pathogenflow.get.input(area_type,human_age_type)
+      onsite_data[[area_type]][[human_age_type]] <- pathogenflow.get.input(area_type,human_age_type,pathogen_type)
     }
   }
   tic("calc pathogenflows loadings")
@@ -69,8 +69,15 @@ pathogenflow.run <- function(pathogen){
       }
     }
   }
-  HUMAN_DATA$removalfraction<-1-(HUMAN_DATA$FractionPrimarytreatment*pathogen$RemovalPrimary+HUMAN_DATA$FractionSecondarytreatment*pathogen$RemovalSecondary+
+  removal_fraction_col <- sprintf("fEmitted_inEffluent_after_treatment_%s",pathogen_type)
+  if(removal_fraction_col %in% colnames(HUMAN_DATA)){
+    HUMAN_DATA$removalfraction <<- HUMAN_DATA[[removal_fraction_col]]
+  }
+  else{
+    HUMAN_DATA$removalfraction<-1-(HUMAN_DATA$FractionPrimarytreatment*pathogen$RemovalPrimary+HUMAN_DATA$FractionSecondarytreatment*pathogen$RemovalSecondary+
                                      HUMAN_DATA$FractionTertiarytreatment*pathogen$RemovalTertiary+HUMAN_DATA$FractionQuaternarytreatment*pathogen$RemovalQuaternary+HUMAN_DATA$FractionPonds*pathogen$RemovalPonds)  
+  }
+
     
   for(i in 1:length(emissions$subarea)){
     emissions$pathogen_urb_conforgrid_sewer[i]<-sum(c(emissions$to_sewerage_flushSewer_urb[i]),na.rm=TRUE) #,emissions$to_sewerage_flushSeptic_urb[i],emissions$to_sewerage_flushPit_urb[i],emissions$to_sewerage_flushOpen_urb[i],emissions$to_sewerage_flushUnknown_urb[i],emissions$to_sewerage_pitSlab_urb[i],emissions$to_sewerage_pitNoSlab_urb[i],emissions$to_sewerage_compostingTwinSlab_urb[i],emissions$to_sewerage_compostingTwinNoSlab_urb[i],emissions$to_sewerage_compostingToilet_urb[i],emissions$to_sewerage_bucketLatrine_urb[i],emissions$to_sewerage_containerBased_urb[i],emissions_to_sewerage_hangingToilet_urb[i],emissions_to_sewerage_openDefecation_urb[i],emissions$to_sewerage_other_urb[i]),na.rm=TRUE) #I added all toilet types, but I think only emissions$to_sewerage_flushSewer_urb should have a value >0
@@ -208,7 +215,7 @@ pathogenflow.run <- function(pathogen){
   return(emissions)
 }
 
-pathogenflow.get.input <- function(area_type,human_type){
+pathogenflow.get.input <- function(area_type,human_type, pathogen_type){
   #@Nynke: population is population per human type (adult/child) or total population?
   col_names <- c("iso","scenario","region","flushSewer","flushSeptic","flushPit","flushOpen","flushUnknown","pitSlab","pitNoSlab","compostingTwinSlab","compostingTwinNoSlab","compostingToilet","bucketLatrine",
                  "containerBased","hangingToilet","openDefecation","other","coverBury","sewageTreated","fecalSludgeTreated","isWatertight","hasLeach",
@@ -217,7 +224,19 @@ pathogenflow.get.input <- function(area_type,human_type){
   colnames(onsite_data) <- col_names
   onsite_data$iso <- HUMAN_DATA$iso
   onsite_data$region <- HUMAN_DATA$subarea
-  onsite_data$sheddingRate <- HUMAN_DATA$sheddingRate
+  shedding_rate_col <- sprintf("sheddingRate_%s", tolower(pathogen_type))
+  # set shedding rate for pathogen
+  if(shedding_rate_col %in% colnames(HUMAN_DATA)){
+    onsite_data$sheddingRate <- HUMAN_DATA[[shedding_rate_col]]
+  }
+  else{
+    onsite_data$sheddingRate <- HUMAN_DATA$sheddingRate
+  }
+  # set shedding duration for pathogen type
+  shedding_duration_col <- sprintf("shedding_duration_%s",tolower(pathogen_type))
+  if(shedding_duration_col %in% colnames(HUMAN_DATA)){
+    HUMAN_DATA$shedding_duration <<- HUMAN_DATA[[shedding_rate_col]]
+  }
   
   input_col_names <- colnames(HUMAN_DATA)
   if(area_type=="urban"){
@@ -246,28 +265,37 @@ pathogenflow.get.input <- function(area_type,human_type){
   # set population and incidence
   if(human_type == "child"){
     onsite_data$population <- HUMAN_DATA$population * HUMAN_DATA$fraction_pop_under5
+    age_post_fix <- "under5"
     if(area_type == "urban"){
       onsite_data$population <- onsite_data$population * HUMAN_DATA$fraction_urban_pop
-      incidence <-HUMAN_DATA$incidence_urban_under5
+      #incidence <-HUMAN_DATA$incidence_urban_under5
     }
     else if(area_type == "rural"){
       onsite_data$population <- onsite_data$population * (1 - HUMAN_DATA$fraction_urban_pop)
-      incidence <- HUMAN_DATA$incidence_rural_under5
+      #incidence <- HUMAN_DATA$incidence_rural_under5
     }
   }
   else if(human_type == "adult"){
     onsite_data$population <- HUMAN_DATA$population * (1-HUMAN_DATA$fraction_pop_under5)
+    age_post_fix <- "5plus"
     if(area_type == "urban"){
       onsite_data$population <- onsite_data$population * HUMAN_DATA$fraction_urban_pop
-      incidence <-HUMAN_DATA$incidence_urban_5plus
+      #incidence <-HUMAN_DATA$incidence_urban_5plus
     }
     else if(area_type == "rural"){
       onsite_data$population <- onsite_data$population * (1 - HUMAN_DATA$fraction_urban_pop)
-      incidence <- HUMAN_DATA$incidence_rural_5plus
+      #incidence <- HUMAN_DATA$incidence_rural_5plus
     }
   }
-  
-  onsite_data$excreted <- onsite_data$population * HUMAN_DATA$sheddingRate * HUMAN_DATA$shedding_duration
+  # find the right incidence for urban/child and pathogen type
+  incidence_col_name <- sprintf("incidence_%s_%s",area_type,age_post_fix)
+  if(sprintf("%s_%s",incidence_col_name,tolower(pathogen_type)) %in% colnames(HUMAN_DATA)){
+    incidence_col_name <- sprintf("%s_%s",incidence_col_name,tolower(pathogen_type))
+  }
+  incidence <- HUMAN_DATA[[incidence_col_name]]
+  browser()
+  onsite_data$excreted <- onsite_data$population * onsite_data$sheddingRate * HUMAN_DATA$shedding_duration * incidence
+  browser()
   return(onsite_data)
 }
 

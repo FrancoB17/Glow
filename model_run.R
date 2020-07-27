@@ -7,7 +7,7 @@ source("./Model scripts/readers.R")
 source("./Model scripts/GloWPa.R")
 
 scenarios <- read.csv(file.path(model_input_dir,"overall_inputs.csv"),sep = ENV$csv_sep, stringsAsFactors = F)
-
+browser()
 for(i in 1:dim(scenarios)[1]){
   scenario <- scenarios[i,]
   # set loadings_module to 1; human_emissions if not specified
@@ -21,11 +21,13 @@ for(i in 1:dim(scenarios)[1]){
     scenario$model_output <- model_output_dir
   }
   human_data_fname <- sprintf("%s.csv",scenario$HumanData_filename)
-  human_data <- read.csv(file.path(model_input_dir,human_data_fname))
+  human_data <- read.csv(file.path(model_input_dir,human_data_fname), sep= ENV$csv_sep, stringsAsFactors = F)
   human_data <- human_data[order(human_data$iso),]
   popurban_grid <- readers.read.raster(file.path(scenario$model_input,scenario$population_urban_filename))
   poprural_grid <- readers.read.raster(file.path(scenario$model_input,scenario$population_rural_filename))
   isoraster <- readers.read.raster(file.path(scenario$model_input,scenario$isoraster_filename))
-  wwtp_inputs <- readers.read.wwtp(file.path(scenario$model_input,scenario$WWTPData_filename))
+  if(!is.na(scenario$WWTPData_filename)){
+    wwtp_inputs <- readers.read.wwtp(file.path(scenario$model_input,scenario$WWTPData_filename))
+  }
   output <- glowpa.run(scenario,human_data,isoraster,popurban_grid,poprural_grid,wwtp_inputs)
 }

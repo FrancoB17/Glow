@@ -5,7 +5,7 @@ source("./Model scripts/readers.R")
 source("./Model scripts/GloWPa.R")
 
 #' @post /scenario
-function(human_data,isoraster,popurban,poprural,wwtp,level,wkt_extent){
+function(human_data,isoraster,popurban,poprural,wwtp,level,wkt_extent,pathogen_type,wwtp_available){
   # wkt_extent <-  "POLYGON ((29.5715 -1.48214, 35.00027 -1.48214, 35.00027 4.234466, 29.5715 4.234466, 29.5715 -1.48214))"
   # TODO: isoraster, population grids will be stored on server???
   if(missing(human_data) || missing(isoraster) || missing(popurban) || missing(poprural)){
@@ -13,7 +13,7 @@ function(human_data,isoraster,popurban,poprural,wwtp,level,wkt_extent){
   }
   human_data <- read.csv(text = human_data)
   cl <- makeCluster(detectCores())
-  clusterExport(cl,varlist = c('readers.read.raster','raster','log_info','tic','toc'))
+  clusterExport(cl,varlist = c('readers.read.raster','raster','log_info','tic','toc','ENV'))
   grids <- parLapply(cl,list(iso=isoraster,urban=popurban,rural=poprural),fun = function(x){
     readers.read.raster(x)
   }) 
@@ -47,16 +47,24 @@ function(human_data,isoraster,popurban,poprural,wwtp,level,wkt_extent){
   if(!missing(wwtp)){
     wwtp_input <- readers.read.wwtp(wwtp)
   }
+
+  if(missing(pathogen_type)){
+    pathogen_type <- "Virus"
+  }
+  if(missing(wwtp_available)){
+    wwtp_available <- 2
+  }
   # create directory for output
   model_ouput <- file.path("./Model output/",Sys.getpid())
   dir.create(model_ouput,recursive = T,showWarnings = F)
   # setup scenario options for mapping tool
   scenario <- data.frame(
-    pathogen="cryptosporidium",
+    pathogen_type=pathogen_type,
+    use_pathogen_file = FALSE,
     model_output = model_ouput, 
     resolution=0.008333, 
     loadings_module=2,
-    wwtp_available=3,
+    wwtp_available=wwtp_available,
     run=1, stringsAsFactors = F)
   glowpa_output <- glowpa.run(scenario[1,],human_data,isoraster_grid,popurban_grid,poprural_grid,wwtp_input)
   # overwrite raster with log10 values
