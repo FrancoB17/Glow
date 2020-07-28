@@ -20,12 +20,15 @@ pathogenflow.run <- function(pathogen){
     }
   }
   tic("calc pathogenflows loadings")
+  # for debugging inside getLoadings
+  #loadings <- pathogenflows::getLoadings(onsite_data$urban$child,pathogen_type)
   cl <- makeCluster(detectCores())
   loadings <- parLapply(cl,unlist(onsite_data,recursive = F),fun = function(x){
-    out <- pathogenflows::getLoadings(x)
+    out <- pathogenflows::getLoadings(x,pathogen_type)
     return(out)
   })
   stopCluster(cl)
+  
   toc(log = T)
   # 3) postprocess output
   for(calc_id in names(loadings)){
@@ -69,7 +72,7 @@ pathogenflow.run <- function(pathogen){
       }
     }
   }
-  removal_fraction_col <- sprintf("fEmitted_inEffluent_after_treatment_%s",pathogen_type)
+  removal_fraction_col <- sprintf("fEmitted_inEffluent_after_treatment_%s",tolower(pathogen_type))
   if(removal_fraction_col %in% colnames(HUMAN_DATA)){
     HUMAN_DATA$removalfraction <<- HUMAN_DATA[[removal_fraction_col]]
   }
@@ -77,7 +80,8 @@ pathogenflow.run <- function(pathogen){
     HUMAN_DATA$removalfraction<-1-(HUMAN_DATA$FractionPrimarytreatment*pathogen$RemovalPrimary+HUMAN_DATA$FractionSecondarytreatment*pathogen$RemovalSecondary+
                                      HUMAN_DATA$FractionTertiarytreatment*pathogen$RemovalTertiary+HUMAN_DATA$FractionQuaternarytreatment*pathogen$RemovalQuaternary+HUMAN_DATA$FractionPonds*pathogen$RemovalPonds)  
   }
-
+  # TODO: check with @Nynke. Can we ussume this?
+  HUMAN_DATA$removalfraction <- replace(HUMAN_DATA$removalfraction, is.na(HUMAN_DATA$removalfraction),1)
     
   for(i in 1:length(emissions$subarea)){
     emissions$pathogen_urb_conforgrid_sewer[i]<-sum(c(emissions$to_sewerage_flushSewer_urb[i]),na.rm=TRUE) #,emissions$to_sewerage_flushSeptic_urb[i],emissions$to_sewerage_flushPit_urb[i],emissions$to_sewerage_flushOpen_urb[i],emissions$to_sewerage_flushUnknown_urb[i],emissions$to_sewerage_pitSlab_urb[i],emissions$to_sewerage_pitNoSlab_urb[i],emissions$to_sewerage_compostingTwinSlab_urb[i],emissions$to_sewerage_compostingTwinNoSlab_urb[i],emissions$to_sewerage_compostingToilet_urb[i],emissions$to_sewerage_bucketLatrine_urb[i],emissions$to_sewerage_containerBased_urb[i],emissions_to_sewerage_hangingToilet_urb[i],emissions_to_sewerage_openDefecation_urb[i],emissions$to_sewerage_other_urb[i]),na.rm=TRUE) #I added all toilet types, but I think only emissions$to_sewerage_flushSewer_urb should have a value >0
@@ -94,8 +98,32 @@ pathogenflow.run <- function(pathogen){
     else{
       emissions$pathogen_urb_conforgrid[i]<-NA
       emissions$pathogen_rur_conforgrid[i]<-NA
-      emissions$pathogen_urb_waterforgrid[i]<-(emissions$pathogen_urb_conforgrid_sewer[i]+emissions$pathogen_urb_conforgrid_onsite[i])*HUMAN_DATA$removalfraction[i]+sum(c(emissions$to_surface_flushSewer_urb[i],emissions$to_surface_flushSeptic_urb[i]*(1-HUMAN_DATA$onsiteDumpedland_urb[i]),emissions$to_surface_flushPit_urb[i]*(1-HUMAN_DATA$onsiteDumpedland_urb[i]),emissions$to_surface_flushOpen_urb[i],emissions$to_surface_flushUnknown_urb[i],emissions$to_surface_pitSlab_urb[i]*(1-HUMAN_DATA$onsiteDumpedland_urb[i]),emissions$to_surface_pitNoSlab_urb[i]*(1-HUMAN_DATA$onsiteDumpedland_urb[i]),emissions$to_surface_compostingTwinSlab_urb[i]*(1-HUMAN_DATA$onsiteDumpedland_urb[i]),emissions$to_surface_compostingTwinNoSlab_urb[i]*(1-HUMAN_DATA$onsiteDumpedland_urb[i]),emissions$to_surface_compostingToilet_urb[i]*(1-HUMAN_DATA$onsiteDumpedland_urb[i]),emissions$to_surface_bucketLatrine_urb[i],emissions$to_surface_containerBased_urb[i],emissions$to_surface_hangingToilet_urb[i],emissions$to_surface_openDefecation_urb[i],emissions$to_surface_other_urb[i]),na.rm=TRUE)
-      emissions$pathogen_rur_waterforgrid[i]<-(emissions$pathogen_rur_conforgrid_sewer[i]+emissions$pathogen_rur_conforgrid_onsite[i])*HUMAN_DATA$removalfraction[i]+sum(c(emissions$to_surface_flushSewer_rur[i],emissions$to_surface_flushSeptic_rur[i]*(1-HUMAN_DATA$onsiteDumpedland_rur[i]),emissions$to_surface_flushPit_rur[i]*(1-HUMAN_DATA$onsiteDumpedland_rur[i]),emissions$to_surface_flushOpen_rur[i],emissions$to_surface_flushUnknown_rur[i],emissions$to_surface_pitSlab_rur[i]*(1-HUMAN_DATA$onsiteDumpedland_rur[i]),emissions$to_surface_pitNoSlab_rur[i]*(1-HUMAN_DATA$onsiteDumpedland_rur[i]),emissions$to_surface_compostingTwinSlab_rur[i]*(1-HUMAN_DATA$onsiteDumpedland_rur[i]),emissions$to_surface_compostingTwinNoSlab_rur[i]*(1-HUMAN_DATA$onsiteDumpedland_rur[i]),emissions$to_surface_compostingToilet_rur[i]*(1-HUMAN_DATA$onsiteDumpedland_rur[i]),emissions$to_surface_hangingToilet_rur[i],emissions$to_surface_other_rur[i]),na.rm=TRUE)
+      emissions$pathogen_urb_waterforgrid[i]<-sum(emissions$pathogen_urb_conforgrid_sewer[i],emissions$pathogen_urb_conforgrid_onsite[i], na.rm = T)*HUMAN_DATA$removalfraction[i]+
+        sum(c(emissions$to_surface_flushSewer_urb[i],
+              emissions$to_surface_flushSeptic_urb[i]*(1-HUMAN_DATA$onsiteDumpedland_urb[i]),
+              emissions$to_surface_flushPit_urb[i]*(1-HUMAN_DATA$onsiteDumpedland_urb[i]),
+              emissions$to_surface_flushOpen_urb[i],emissions$to_surface_flushUnknown_urb[i],
+              emissions$to_surface_pitSlab_urb[i]*(1-HUMAN_DATA$onsiteDumpedland_urb[i]),
+              emissions$to_surface_pitNoSlab_urb[i]*(1-HUMAN_DATA$onsiteDumpedland_urb[i]),
+              # emissions$to_surface_compostingTwinSlab_urb[i]*(1-HUMAN_DATA$onsiteDumpedland_urb[i]),
+              # emissions$to_surface_compostingTwinNoSlab_urb[i]*(1-HUMAN_DATA$onsiteDumpedland_urb[i]),
+              emissions$to_surface_compostingToilet_urb[i]*(1-HUMAN_DATA$onsiteDumpedland_urb[i]),
+              emissions$to_surface_bucketLatrine_urb[i],emissions$to_surface_containerBased_urb[i],
+              emissions$to_surface_hangingToilet_urb[i],emissions$to_surface_openDefecation_urb[i],
+              emissions$to_surface_other_urb[i]),na.rm=TRUE)
+      emissions$pathogen_rur_waterforgrid[i]<-sum(emissions$pathogen_rur_conforgrid_sewer[i],emissions$pathogen_rur_conforgrid_onsite[i], na.rm = T)*HUMAN_DATA$removalfraction[i]+
+        sum(c(emissions$to_surface_flushSewer_rur[i],
+              emissions$to_surface_flushSeptic_rur[i]*(1-HUMAN_DATA$onsiteDumpedland_rur[i]),
+              emissions$to_surface_flushPit_rur[i]*(1-HUMAN_DATA$onsiteDumpedland_rur[i]),
+              emissions$to_surface_flushOpen_rur[i],
+              emissions$to_surface_flushUnknown_rur[i],
+              emissions$to_surface_pitSlab_rur[i]*(1-HUMAN_DATA$onsiteDumpedland_rur[i]),
+              emissions$to_surface_pitNoSlab_rur[i]*(1-HUMAN_DATA$onsiteDumpedland_rur[i]),
+              # emissions$to_surface_compostingTwinSlab_rur[i]*(1-HUMAN_DATA$onsiteDumpedland_rur[i]),
+              # emissions$to_surface_compostingTwinNoSlab_rur[i]*(1-HUMAN_DATA$onsiteDumpedland_rur[i]),
+              emissions$to_surface_compostingToilet_rur[i]*(1-HUMAN_DATA$onsiteDumpedland_rur[i]),
+              emissions$to_surface_hangingToilet_rur[i],
+              emissions$to_surface_other_rur[i]),na.rm=TRUE)
       emissions$to_sewerage_flushSewer_urb_out[i]<-emissions$pathogen_urb_conforgrid_sewer[i]*HUMAN_DATA$removalfraction[i]
       emissions$to_sewerage_flushSewer_rur_out[i]<-emissions$pathogen_rur_conforgrid_sewer[i]*HUMAN_DATA$removalfraction[i]
       emissions$to_fecalSludge_flushSeptic_urb_out[i]<-emissions$to_fecalSludge_flushSeptic_urb[i]*HUMAN_DATA$removalfraction[i]
@@ -150,8 +178,8 @@ pathogenflow.run <- function(pathogen){
     emissions$pathogen_urb_fonsite_flushUnknown[a]<-emissions$to_fecalSludge_flushUnknown_urb[a]/(emissions$pathogen_urb_conforgrid[a]*(1-emissions$pathogen_urb_fconsewer[a]))
     emissions$pathogen_urb_fonsite_pitSlab[a]<-emissions$to_fecalSludge_pitSlab_urb[a]/(emissions$pathogen_urb_conforgrid[a]*(1-emissions$pathogen_urb_fconsewer[a]))
     emissions$pathogen_urb_fonsite_pitNoSlab[a]<-emissions$to_fecalSludge_pitNoSlab_urb[a]/(emissions$pathogen_urb_conforgrid[a]*(1-emissions$pathogen_urb_fconsewer[a]))
-    emissions$pathogen_urb_fonsite_compostingTwinSlab[a]<-emissions$to_fecalSludge_compostingTwinSlab_urb[a]/(emissions$pathogen_urb_conforgrid[a]*(1-emissions$pathogen_urb_fconsewer[a]))
-    emissions$pathogen_urb_fonsite_compostingTwinNoSlab[a]<-emissions$to_fecalSludge_compostingTwinNoSlab_urb[a]/(emissions$pathogen_urb_conforgrid[a]*(1-emissions$pathogen_urb_fconsewer[a]))
+    #emissions$pathogen_urb_fonsite_compostingTwinSlab[a]<-emissions$to_fecalSludge_compostingTwinSlab_urb[a]/(emissions$pathogen_urb_conforgrid[a]*(1-emissions$pathogen_urb_fconsewer[a]))
+    #emissions$pathogen_urb_fonsite_compostingTwinNoSlab[a]<-emissions$to_fecalSludge_compostingTwinNoSlab_urb[a]/(emissions$pathogen_urb_conforgrid[a]*(1-emissions$pathogen_urb_fconsewer[a]))
     emissions$pathogen_urb_fonsite_compostingToilet[a]<-emissions$to_fecalSludge_compostingToilet_urb[a]/(emissions$pathogen_urb_conforgrid[a]*(1-emissions$pathogen_urb_fconsewer[a]))
     emissions$pathogen_urb_fonsite_bucketLatrine[a]<-emissions$to_fecalSludge_bucketLatrine_urb[a]/(emissions$pathogen_urb_conforgrid[a]*(1-emissions$pathogen_urb_fconsewer[a]))
     emissions$pathogen_urb_fonsite_containerBased[a]<-emissions$to_fecalSludge_containerBased_urb[a]/(emissions$pathogen_urb_conforgrid[a]*(1-emissions$pathogen_urb_fconsewer[a]))
@@ -165,8 +193,8 @@ pathogenflow.run <- function(pathogen){
     emissions$pathogen_rur_fonsite_flushUnknown[b]<-emissions$to_fecalSludge_flushUnknown_rur[b]/(emissions$pathogen_rur_conforgrid[b]*(1-emissions$pathogen_rur_fconsewer[b]))
     emissions$pathogen_rur_fonsite_pitSlab[b]<-emissions$to_fecalSludge_pitSlab_rur[b]/(emissions$pathogen_rur_conforgrid[b]*(1-emissions$pathogen_rur_fconsewer[b]))
     emissions$pathogen_rur_fonsite_pitNoSlab[b]<-emissions$to_fecalSludge_pitNoSlab_rur[b]/(emissions$pathogen_rur_conforgrid[b]*(1-emissions$pathogen_rur_fconsewer[b]))
-    emissions$pathogen_rur_fonsite_compostingTwinSlab[b]<-emissions$to_fecalSludge_compostingTwinSlab_rur[b]/(emissions$pathogen_rur_conforgrid[b]*(1-emissions$pathogen_rur_fconsewer[b]))
-    emissions$pathogen_rur_fonsite_compostingTwinNoSlab[b]<-emissions$to_fecalSludge_compostingTwinNoSlab_rur[b]/(emissions$pathogen_rur_conforgrid[b]*(1-emissions$pathogen_rur_fconsewer[b]))
+    #emissions$pathogen_rur_fonsite_compostingTwinSlab[b]<-emissions$to_fecalSludge_compostingTwinSlab_rur[b]/(emissions$pathogen_rur_conforgrid[b]*(1-emissions$pathogen_rur_fconsewer[b]))
+    #emissions$pathogen_rur_fonsite_compostingTwinNoSlab[b]<-emissions$to_fecalSludge_compostingTwinNoSlab_rur[b]/(emissions$pathogen_rur_conforgrid[b]*(1-emissions$pathogen_rur_fconsewer[b]))
     emissions$pathogen_rur_fonsite_compostingToilet[b]<-emissions$to_fecalSludge_compostingToilet_rur[b]/(emissions$pathogen_rur_conforgrid[b]*(1-emissions$pathogen_rur_fconsewer[b]))
     emissions$pathogen_rur_fonsite_bucketLatrine[b]<-emissions$to_fecalSludge_bucketLatrine_rur[b]/(emissions$pathogen_rur_conforgrid[b]*(1-emissions$pathogen_rur_fconsewer[b]))
     emissions$pathogen_rur_fonsite_containerBased[b]<-emissions$to_fecalSludge_containerBased_rur[b]/(emissions$pathogen_rur_conforgrid[b]*(1-emissions$pathogen_rur_fconsewer[b]))
@@ -180,8 +208,8 @@ pathogenflow.run <- function(pathogen){
   emissions$to_surface_flushUnknown_urb_out<-emissions$to_surface_flushUnknown_urb
   emissions$to_surface_pitSlab_urb_out<-emissions$to_surface_pitSlab_urb*(1-HUMAN_DATA$onsiteDumpedland_urb)+emissions$to_surface_pitSlab_urb*HUMAN_DATA$onsiteDumpedland_urb*0.025
   emissions$to_surface_pitNoSlab_urb_out<-emissions$to_surface_pitNoSlab_urb*(1-HUMAN_DATA$onsiteDumpedland_urb)+emissions$to_surface_pitNoSlab_urb*HUMAN_DATA$onsiteDumpedland_urb*0.025
-  emissions$to_surface_compostingTwinSlab_urb_out<-emissions$to_surface_compostingTwinSlab_urb*(1-HUMAN_DATA$onsiteDumpedland_urb)+emissions$to_surface_compostingTwinSlab_urb*HUMAN_DATA$onsiteDumpedland_urb*0.025
-  emissions$to_surface_compostingTwinNoSlab_urb_out<-emissions$to_surface_compostingTwinNoSlab_urb*(1-HUMAN_DATA$onsiteDumpedland_urb)+emissions$to_surface_compostingTwinNoSlab_urb*HUMAN_DATA$onsiteDumpedland_urb*0.025
+  #emissions$to_surface_compostingTwinSlab_urb_out<-emissions$to_surface_compostingTwinSlab_urb*(1-HUMAN_DATA$onsiteDumpedland_urb)+emissions$to_surface_compostingTwinSlab_urb*HUMAN_DATA$onsiteDumpedland_urb*0.025
+  #emissions$to_surface_compostingTwinNoSlab_urb_out<-emissions$to_surface_compostingTwinNoSlab_urb*(1-HUMAN_DATA$onsiteDumpedland_urb)+emissions$to_surface_compostingTwinNoSlab_urb*HUMAN_DATA$onsiteDumpedland_urb*0.025
   emissions$to_surface_compostingToilet_urb_out<-emissions$to_surface_compostingToilet_urb*(1-HUMAN_DATA$onsiteDumpedland_urb)+emissions$to_surface_compostingToilet_urb*HUMAN_DATA$onsiteDumpedland_urb*0.025
   emissions$to_surface_bucketLatrine_urb_out<-emissions$to_surface_bucketLatrine_urb
   emissions$to_surface_containerBased_urb_out<-emissions$to_surface_containerBased_urb
@@ -196,8 +224,8 @@ pathogenflow.run <- function(pathogen){
   emissions$to_surface_flushUnknown_rur_out<-emissions$to_surface_flushUnknown_rur
   emissions$to_surface_pitSlab_rur_out<-emissions$to_surface_pitSlab_rur*(1-HUMAN_DATA$onsiteDumpedland_rur)+emissions$to_surface_pitSlab_rur*HUMAN_DATA$onsiteDumpedland_rur*0.025
   emissions$to_surface_pitNoSlab_rur_out<-emissions$to_surface_pitNoSlab_rur*(1-HUMAN_DATA$onsiteDumpedland_rur)+emissions$to_surface_pitNoSlab_rur*HUMAN_DATA$onsiteDumpedland_rur*0.025
-  emissions$to_surface_compostingTwinSlab_rur_out<-emissions$to_surface_compostingTwinSlab_rur*(1-HUMAN_DATA$onsiteDumpedland_rur)+emissions$to_surface_compostingTwinSlab_rur*HUMAN_DATA$onsiteDumpedland_rur*0.025
-  emissions$to_surface_compostingTwinNoSlab_rur_out<-emissions$to_surface_compostingTwinNoSlab_rur*(1-HUMAN_DATA$onsiteDumpedland_rur)+emissions$to_surface_compostingTwinNoSlab_rur*HUMAN_DATA$onsiteDumpedland_rur*0.025
+  #emissions$to_surface_compostingTwinSlab_rur_out<-emissions$to_surface_compostingTwinSlab_rur*(1-HUMAN_DATA$onsiteDumpedland_rur)+emissions$to_surface_compostingTwinSlab_rur*HUMAN_DATA$onsiteDumpedland_rur*0.025
+  #emissions$to_surface_compostingTwinNoSlab_rur_out<-emissions$to_surface_compostingTwinNoSlab_rur*(1-HUMAN_DATA$onsiteDumpedland_rur)+emissions$to_surface_compostingTwinNoSlab_rur*HUMAN_DATA$onsiteDumpedland_rur*0.025
   emissions$to_surface_compostingToilet_rur_out<-emissions$to_surface_compostingToilet_rur*(1-HUMAN_DATA$onsiteDumpedland_rur)+emissions$to_surface_compostingToilet_rur*HUMAN_DATA$onsiteDumpedland_rur*0.025
   emissions$to_surface_bucketLatrine_rur_out<-emissions$to_surface_bucketLatrine_rur*0.025
   emissions$to_surface_containerBased_rur_out<-emissions$to_surface_containerBased_rur*0.025
@@ -217,7 +245,7 @@ pathogenflow.run <- function(pathogen){
 
 pathogenflow.get.input <- function(area_type,human_type, pathogen_type){
   #@Nynke: population is population per human type (adult/child) or total population?
-  col_names <- c("iso","scenario","region","flushSewer","flushSeptic","flushPit","flushOpen","flushUnknown","pitSlab","pitNoSlab","compostingTwinSlab","compostingTwinNoSlab","compostingToilet","bucketLatrine",
+  col_names <- c("iso","scenario","region","flushSewer","flushSeptic","flushPit","flushOpen","flushUnknown","pitSlab","pitNoSlab","compostingToilet","bucketLatrine",
                  "containerBased","hangingToilet","openDefecation","other","coverBury","sewageTreated","fecalSludgeTreated","isWatertight","hasLeach",
                  "emptyFrequency", "pitAdditive", "urine")  
   onsite_data <- data.frame(matrix(ncol=length(col_names),nrow = dim(HUMAN_DATA)[1]))
@@ -293,9 +321,7 @@ pathogenflow.get.input <- function(area_type,human_type, pathogen_type){
     incidence_col_name <- sprintf("%s_%s",incidence_col_name,tolower(pathogen_type))
   }
   incidence <- HUMAN_DATA[[incidence_col_name]]
-  browser()
   onsite_data$excreted <- onsite_data$population * onsite_data$sheddingRate * HUMAN_DATA$shedding_duration * incidence
-  browser()
   return(onsite_data)
 }
 
@@ -303,7 +329,7 @@ pathogenflow.wwtp <- function(emissions){
   log_info("Applying WWTP for pathogenflow emissions ")
   for(area_type in c("urb","rur")){
     emissions[[sprintf("to_sewerage_flushSewer_%s_out",area_type)]] <- emissions[[sprintf("pathogen_%s_WWTP_sewer",area_type)]]
-    for(jmp_type in c("flushSeptic","flushPit","flushOpen","flushUnknown","pitSlab","pitNoSlab","compostingTwinSlab","compostingTwinNoSlab","compostingToilet","bucketLatrine","containerBased","other")){
+    for(jmp_type in c("flushSeptic","flushPit","flushOpen","flushUnknown","pitSlab","pitNoSlab","compostingToilet","bucketLatrine","containerBased","other")){
       col_name_target <- sprintf("to_fecalSludge_%s_%s_out",jmp_type,area_type)
       col_name_source <- sprintf("pathogen_%s_WWTP_onsite",area_type)
       col_name_factor <- sprintf("pathogen_%s_fonsite_%s",area_type,jmp_type)
@@ -318,21 +344,21 @@ pathogenflow.calc.totals <- function(emissions){
   totals <- data.frame(matrix(nrow=nrow(emissions),ncol=0))
   totals$iso <- emissions$iso
   totals$subarea <- emissions$subarea
-  totals$total_flushSewer_out<- emissions$to_sewerage_flushSewer_urb_out+ emissions$to_surface_flushSewer_urb_out+ emissions$to_sewerage_flushSewer_rur_out+ emissions$to_surface_flushSewer_rur_out
-  totals$total_flushSeptic_out<- emissions$to_fecalSludge_flushSeptic_urb_out+emissions$to_surface_flushSeptic_urb_out+emissions$to_fecalSludge_flushSeptic_rur_out+emissions$to_surface_flushSeptic_rur_out
-  totals$total_flushPit_out<- emissions$to_fecalSludge_flushPit_urb_out+emissions$to_surface_flushPit_urb_out+emissions$to_fecalSludge_flushPit_rur_out+emissions$to_surface_flushPit_rur_out
-  totals$total_flushOpen_out<- emissions$to_fecalSludge_flushOpen_urb_out+emissions$to_surface_flushOpen_urb_out+emissions$to_fecalSludge_flushOpen_rur_out+emissions$to_surface_flushOpen_rur_out
-  totals$total_flushUnknown_out<-emissions$to_fecalSludge_flushUnknown_urb_out+emissions$to_surface_flushUnknown_urb_out+emissions$to_fecalSludge_flushUnknown_rur_out+emissions$to_surface_flushUnknown_rur_out
-  totals$total_pitSlab_out<- emissions$to_fecalSludge_pitSlab_urb_out+emissions$to_surface_pitSlab_urb_out+emissions$to_fecalSludge_pitSlab_rur_out+emissions$to_surface_pitSlab_rur_out
-  totals$total_pitNoSlab_out<-emissions$to_fecalSludge_pitNoSlab_urb_out+emissions$to_surface_pitNoSlab_urb_out+emissions$to_fecalSludge_pitNoSlab_rur_out+emissions$to_surface_pitNoSlab_rur_out
-  totals$total_compostingTwinSlab_out<- emissions$to_fecalSludge_compostingTwinSlab_urb_out+emissions$to_surface_compostingTwinSlab_urb_out+emissions$to_fecalSludge_compostingTwinSlab_rur_out+emissions$to_surface_compostingTwinSlab_rur_out
-  totals$total_compostingTwinNoSlab_out<- emissions$to_fecalSludge_compostingTwinNoSlab_urb_out+emissions$to_surface_compostingTwinNoSlab_urb_out+emissions$to_fecalSludge_compostingTwinNoSlab_rur_out+emissions$to_surface_compostingTwinNoSlab_rur_out
-  totals$total_compostingToilet_out<- emissions$to_fecalSludge_compostingToilet_urb_out+emissions$to_surface_compostingToilet_urb_out+emissions$to_fecalSludge_compostingToilet_rur_out+emissions$to_surface_compostingToilet_rur_out
-  totals$total_bucketLatrine_out<-emissions$to_fecalSludge_bucketLatrine_urb_out+emissions$to_surface_bucketLatrine_urb_out+emissions$to_fecalSludge_bucketLatrine_rur_out+emissions$to_surface_bucketLatrine_rur_out
-  totals$total_containerBased_out<- emissions$to_fecalSludge_containerBased_urb_out+emissions$to_surface_containerBased_urb_out+emissions$to_fecalSludge_containerBased_rur_out+emissions$to_surface_containerBased_rur_out
-  totals$total_hangingToilet_out<- emissions$to_surface_hangingToilet_urb_out+emissions$to_surface_hangingToilet_rur_out
-  totals$total_openDefecation_out<- emissions$to_surface_openDefecation_urb_out+emissions$to_surface_openDefecation_rur_out
-  totals$total_other_out<- emissions$to_fecalSludge_other_urb_out+emissions$to_surface_other_urb_out+emissions$to_fecalSludge_other_rur_out+emissions$to_surface_other_rur_out
+  totals$total_flushSewer_out<- rowSums(cbind(emissions$to_sewerage_flushSewer_urb_out, emissions$to_surface_flushSewer_urb_out, emissions$to_sewerage_flushSewer_rur_out, emissions$to_surface_flushSewer_rur_out),na.rm=T)
+  totals$total_flushSeptic_out<- rowSums(cbind(emissions$to_fecalSludge_flushSeptic_urb_out,emissions$to_surface_flushSeptic_urb_out,emissions$to_fecalSludge_flushSeptic_rur_out,emissions$to_surface_flushSeptic_rur_out), na.rm=T)
+  totals$total_flushPit_out<- rowSums(cbind(emissions$to_fecalSludge_flushPit_urb_out,emissions$to_surface_flushPit_urb_out,emissions$to_fecalSludge_flushPit_rur_out,emissions$to_surface_flushPit_rur_out), na.rm=T)
+  totals$total_flushOpen_out<- rowSums(cbind(emissions$to_fecalSludge_flushOpen_urb_out,emissions$to_surface_flushOpen_urb_out,emissions$to_fecalSludge_flushOpen_rur_out,emissions$to_surface_flushOpen_rur_out), na.rm=T)
+  totals$total_flushUnknown_out<-rowSums(cbind(emissions$to_fecalSludge_flushUnknown_urb_out,emissions$to_surface_flushUnknown_urb_out,emissions$to_fecalSludge_flushUnknown_rur_out,emissions$to_surface_flushUnknown_rur_out), na.rm=T)
+  totals$total_pitSlab_out<- rowSums(cbind(emissions$to_fecalSludge_pitSlab_urb_out,emissions$to_surface_pitSlab_urb_out,emissions$to_fecalSludge_pitSlab_rur_out,emissions$to_surface_pitSlab_rur_out), na.rm = T)
+  totals$total_pitNoSlab_out<-rowSums(cbind(emissions$to_fecalSludge_pitNoSlab_urb_out,emissions$to_surface_pitNoSlab_urb_out,emissions$to_fecalSludge_pitNoSlab_rur_out,emissions$to_surface_pitNoSlab_rur_out), na.rm=T)
+  #totals$total_compostingTwinSlab_out<- emissions$to_fecalSludge_compostingTwinSlab_urb_out,emissions$to_surface_compostingTwinSlab_urb_out,emissions$to_fecalSludge_compostingTwinSlab_rur_out,emissions$to_surface_compostingTwinSlab_rur_out
+  #totals$total_compostingTwinNoSlab_out<- emissions$to_fecalSludge_compostingTwinNoSlab_urb_out,emissions$to_surface_compostingTwinNoSlab_urb_out,emissions$to_fecalSludge_compostingTwinNoSlab_rur_out,emissions$to_surface_compostingTwinNoSlab_rur_out
+  totals$total_compostingToilet_out<- rowSums(cbind(emissions$to_fecalSludge_compostingToilet_urb_out,emissions$to_surface_compostingToilet_urb_out,emissions$to_fecalSludge_compostingToilet_rur_out,emissions$to_surface_compostingToilet_rur_out), na.rm = T)
+  totals$total_bucketLatrine_out<- rowSums(cbind(emissions$to_fecalSludge_bucketLatrine_urb_out,emissions$to_surface_bucketLatrine_urb_out,emissions$to_fecalSludge_bucketLatrine_rur_out,emissions$to_surface_bucketLatrine_rur_out), na.rm=T)
+  totals$total_containerBased_out<- rowSums(cbind(emissions$to_fecalSludge_containerBased_urb_out,emissions$to_surface_containerBased_urb_out,emissions$to_fecalSludge_containerBased_rur_out,emissions$to_surface_containerBased_rur_out), na.rm = T)
+  totals$total_hangingToilet_out<- rowSums(cbind(emissions$to_surface_hangingToilet_urb_out,emissions$to_surface_hangingToilet_rur_out), na.rm = T)
+  totals$total_openDefecation_out<- rowSums(cbind(emissions$to_surface_openDefecation_urb_out,emissions$to_surface_openDefecation_rur_out), na.rm = T)
+  totals$total_other_out<- rowSums(cbind(emissions$to_fecalSludge_other_urb_out+emissions$to_surface_other_urb_out+emissions$to_fecalSludge_other_rur_out+emissions$to_surface_other_rur_out), na.rm = T)
   
   return(totals)
 }

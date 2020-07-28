@@ -1,6 +1,8 @@
 #' This file can be used to run gloWPa using REST api calls. Start api by api <- plumber::plumb(api.R) and then api$run()
 library(plumber)
 library(jsonlite)
+library(rnaturalearth)
+library(rnaturalearthdata)
 source("./Model scripts/readers.R")
 source("./Model scripts/GloWPa.R")
 
@@ -28,18 +30,10 @@ function(human_data,isoraster,popurban,poprural,wwtp,level,wkt_extent,pathogen_t
   else{
     gadm_level <- level
   }
- 
   # implementation for new setup
-  if(!missing(wkt_extent)){
-    # in this case gadm data will be read from the geopackage. 
-    boundaries <- geo.get.boundaries(level=gadm_level,gpkg_path=ENV$gadm_file,wkt_filter=wkt_extent)
-  }
-  # implementation for pilot case uganda. TODO: remove this part when data has been updated with new columns
-  else{
-    # TODO: make this generic. We need the level to passed to the model from the api
-    gadm_level <- 3
-    boundaries <- geo.get.boundaries(level=gadm_level,country='UGA')
-  }
+  # in this case gadm data will be read from the geopackage. 
+  boundaries <- geo.get.boundaries(level=gadm_level,gpkg_path=ENV$gadm_file,wkt_filter=wkt_extent)
+  
   # crop isoraster
   isoraster_grid <- crop(isoraster_grid,boundaries)
 
@@ -72,7 +66,11 @@ function(human_data,isoraster,popurban,poprural,wwtp,level,wkt_extent,pathogen_t
   writeRaster(glowpa_output$grid$pathogen_water,filename = glowpa_output$files$pathogen_water_grid, overwrite=T)
   brks<-c(-1,0,1,2,3,4,5,6,7,8,9,10,11,12,13,Inf)
   cols <- plotter.get.colors.khroma("discrete rainbow",14)
-  plot_path <- plotter.plot.map(glowpa_output$grid$pathogen_water,col=cols,breaks=brks,boundaries=boundaries)
+  boundaries_plot <- boundaries
+  if(level=0){
+    boundaries_plot <- rnaturalearth::ne_countries(scale=50,returnclass = "sp")
+  }
+  plot_path <- plotter.plot.map(glowpa_output$grid$pathogen_water,col=cols,breaks=brks,boundaries=boundaries_plot)
   response <- list(
     grid=list(
       file=glowpa_output$files$pathogen_water_grid,

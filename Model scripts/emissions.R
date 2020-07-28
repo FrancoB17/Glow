@@ -14,7 +14,7 @@ emissions.na.replace <- function(emissions,fill=0){
   for(col_name in cols){
     na_idx <- which(is.na(emissions[[col_name]]))
     if(length(na_idx)>0){
-      emissions[[na_idx,col_name]] <- fill
+      emissions[[col_name]][na_idx] <- fill
     }
   }
   return(emissions)
