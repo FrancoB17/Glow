@@ -13,7 +13,7 @@ gadm.get.data <- function(gadm_gids,wkt_filter,country,level,gpkg_path,simplify=
       sf_data <- st_read(gpkg_path,layer=layer,query=sql_q)
     }
     else if(!missing(wkt_filter)){
-      sf_data <- st_read(ENV$gadm_file,wkt_filter = wkt_filter)
+      sf_data <- st_read(ENV$gadm_file,layer=layer,wkt_filter = wkt_filter)
       # remove null geometries, because they give errors in conversion to spatial object
       sf_data <- sf_data[!st_is_empty(sf_data),]
     }

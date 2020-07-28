@@ -3,8 +3,9 @@ library(sp)
 library(khroma)
 
 plotter.plot.map <- function(grid,out_file,col, breaks,width,height,boundaries){
+  pathogen_text <- if(!is.null(PATHOGEN$name) || !PATHOGEN$name == '') PATHOGEN$name else if(!is.null(PATHOGEN$pathogenType || !PATHOGEN$pathogenType))SCENARIO$pathogenType else ""
   if(missing(out_file)){
-    fname <- sprintf("humanemissions_%s_%s.png",SCENARIO$pathogen,SCENARIO$run)
+    fname <- sprintf("humanemissions_%s_%s.png",pathogen_text,SCENARIO$run)
     out_file <- file.path(SCENARIO$model_output,fname)
   }
   if(missing(col)){
@@ -30,14 +31,16 @@ plotter.plot.map <- function(grid,out_file,col, breaks,width,height,boundaries){
     else{
       log_warn("Missing arguments. Cannot plot boundaries.")
     }
-    legend_text <- ""
+    unit <- ""
     # plot legend
-    if(SCENARIO$pathogen == "cryptosporidium"){
-      legend_text <- "Cryptosporidium emissions (log10 oocysts / year)"
+    if(PATHOGEN$name == "cryptosporidium" || PATHOGEN$pathogenType == "Protozoa"){
+      unit <- "(log10 oocysts / year)"
     }
-    else if(SCENARIO$pathogen == "rotavirus"){
-      legend_text <- "Rotavirus emissions (log10 viral particles / year)" 
+    else if(PATHOGEN$name == "rotavirus" || PATHOGEN$pathogenType == "Virus"){
+      unit <- "(log10 viral particles / year)"
     }
+    
+    legend_text <- sprintf("%s emissions %s",pathogen_text,unit)
     labels <- breaks
     if(breaks[length(breaks)]==Inf){
       labels[length(labels)] <- sprintf(">%s",breaks[length(breaks)-1])

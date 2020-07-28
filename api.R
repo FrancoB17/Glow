@@ -28,14 +28,14 @@ function(human_data,isoraster,popurban,poprural,wwtp,level,wkt_extent,pathogen_t
     gadm_level <- 0
   }
   else{
-    gadm_level <- level
+    gadm_level <- as.integer(level) 
   }
   # implementation for new setup
   # in this case gadm data will be read from the geopackage. 
-  boundaries <- geo.get.boundaries(level=gadm_level,gpkg_path=ENV$gadm_file,wkt_filter=wkt_extent)
+  borders <- geo.get.boundaries(level=gadm_level,gpkg_path=ENV$gadm_file,wkt_filter=wkt_extent)
   
   # crop isoraster
-  isoraster_grid <- crop(isoraster_grid,boundaries)
+  isoraster_grid <- crop(isoraster_grid,borders)
 
   wwtp_input <- NULL
   if(!missing(wwtp)){
@@ -53,8 +53,9 @@ function(human_data,isoraster,popurban,poprural,wwtp,level,wkt_extent,pathogen_t
   dir.create(model_ouput,recursive = T,showWarnings = F)
   # setup scenario options for mapping tool
   scenario <- data.frame(
-    pathogen_type=pathogen_type,
-    use_pathogen_file = FALSE,
+    pathogen_type = pathogen_type,
+    pathogen_name = "",
+    use_pathogen_file = TRUE,
     model_output = model_ouput, 
     resolution=0.008333, 
     loadings_module=2,
@@ -66,8 +67,8 @@ function(human_data,isoraster,popurban,poprural,wwtp,level,wkt_extent,pathogen_t
   writeRaster(glowpa_output$grid$pathogen_water,filename = glowpa_output$files$pathogen_water_grid, overwrite=T)
   brks<-c(-1,0,1,2,3,4,5,6,7,8,9,10,11,12,13,Inf)
   cols <- plotter.get.colors.khroma("discrete rainbow",14)
-  boundaries_plot <- boundaries
-  if(level=0){
+  boundaries_plot <- borders
+  if(level==0){
     boundaries_plot <- rnaturalearth::ne_countries(scale=50,returnclass = "sp")
   }
   plot_path <- plotter.plot.map(glowpa_output$grid$pathogen_water,col=cols,breaks=brks,boundaries=boundaries_plot)

@@ -29,8 +29,8 @@ source("./Model scripts/pathogen.R")
 SCENARIO <<- data.frame(
   run = 1,
   loadings_module=1,
-  pathogen ="rotavirus",
-  pathogenType = "Virus",
+  pathogen_name ="rotavirus",
+  pathogen_type = "Virus",
   use_pathogen_file = TRUE,
   model_input ="./Model input", 
   model_output = "./Model output",
@@ -59,20 +59,15 @@ glowpa.run <- function(scenario,human_data,isoraster,popurban,poprural,wwtp_inpu
     log_file <- file.path(SCENARIO$model_output,sprintf("logs/log_run%s_pid%s.txt",SCENARIO$run, Sys.getpid()))
     logger.init(log_file)
     log_info('Start scenario run with id {SCENARIO$run}')
-    params_table <- ""
-    for(par in colnames(SCENARIO)){
-      par_value <- SCENARIO[[par]]
-      entry <- sprintf("%s= %s\n",par,par_value)
-      params_table <- paste(params_table,entry)
-    }
+    params_table <- logger.get.table(SCENARIO)
     log_info('Model started with following params:\n{params_table}')
-    
+   
     ISORASTER <<- isoraster
     HUMAN_DATA <<- human_data
     OUTPUT <<- list(emissions=NULL,grid=NULL,files=list(pathogen_water_grid=NULL))
     dir.create(SCENARIO$model_output,recursive = T,showWarnings = F)
     # search pathogen information
-    pathogen <- pathogen.get()
+    PATHOGEN <<- pathogen.get()
     tic("preprocess population")
     populations <- population.preprocess(popurban,poprural)
     toc(log=T)
@@ -83,7 +78,7 @@ glowpa.run <- function(scenario,human_data,isoraster,popurban,poprural,wwtp_inpu
     else if(SCENARIO$loadings_module==2){
       source("./Model scripts/pathogenflows.R")
       tic("pathogen flow module")
-      OUTPUT$emissions <<- pathogenflow.run(pathogen)
+      OUTPUT$emissions <<- pathogenflow.run(PATHOGEN)
       toc(log=T)
     }
     
@@ -94,7 +89,7 @@ glowpa.run <- function(scenario,human_data,isoraster,popurban,poprural,wwtp_inpu
     OUTPUT$emissions <<- emissions.na.replace(OUTPUT$emissions)
     # apply wwtp
     tic("WWTP plan module")
-    wwtp_output <- wwtp.run(OUTPUT$emissions, pathogen, populations$urban, populations$rural, wwtp_input)
+    wwtp_output <- wwtp.run(OUTPUT$emissions, PATHOGEN, populations$urban, populations$rural, wwtp_input)
     toc(log=T)
     OUTPUT$emissions <<- wwtp_output$emissions
     OUTPUT$grid <<- wwtp_output$grid
@@ -110,13 +105,13 @@ glowpa.run <- function(scenario,human_data,isoraster,popurban,poprural,wwtp_inpu
       OUTPUT$emissions$pathogen_urb_onsite_land <<-0.025*OUTPUT$emissions$pathogen_urb_onsite_land
       OUTPUT$emissions$pathogen_rur_onsite_land <<-0.025*OUTPUT$emissions$pathogen_rur_onsite_land
       # save in asci grid format
-      writeRaster(OUTPUT$grid$pathogen_water,file.path(SCENARIO$model_output,sprintf("humanemissions_%s%s",pathogen$name,SCENARIO$run)), format="ascii", overwrite=TRUE)
+      writeRaster(OUTPUT$grid$pathogen_water,file.path(SCENARIO$model_output,sprintf("humanemissions_%s%s",PATHOGEN$name,SCENARIO$run)), format="ascii", overwrite=TRUE)
       
       library(tidyverse)
       library(dplyr)
       # save emissions to csv
       selection <- emissions %>% select(1:16)
-      write.csv(selection, file=file.path(SCENARIO$model_output,sprintf("HumanEmissionsCalculated_%s%s.csv",pathogen$name,SCENARIO$run)))
+      write.csv(selection, file=file.path(SCENARIO$model_output,sprintf("HumanEmissionsCalculated_%s%s.csv",PATHOGEN$name,SCENARIO$run)))
       detach("package:tidyverse", unload=TRUE)
       detach("package:dplyr", unload=TRUE)
     }
@@ -126,7 +121,7 @@ glowpa.run <- function(scenario,human_data,isoraster,popurban,poprural,wwtp_inpu
     }
     # save geotiff
     OUTPUT$grid$pathogen_water[OUTPUT$grid$pathogen_water==0]<-NA
-    out_file <- file.path(SCENARIO$model_output,sprintf("humanemissions_%s%s.tif",pathogen$name,SCENARIO$run))
+    out_file <- file.path(SCENARIO$model_output,sprintf("humanemissions_%s_%s.tif",PATHOGEN$name,SCENARIO$run))
     log_info("Writing raster output")
     writeRaster(OUTPUT$grid$pathogen_water,out_file,format="GTiff",overwrite=TRUE)
     OUTPUT$files$pathogen_water_grid = out_file 

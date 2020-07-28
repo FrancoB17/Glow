@@ -12,18 +12,29 @@ pathogen.get <- function(){
   }
   else if(SCENARIO$use_pathogen_file){
     pathogen_inputs <- read.csv(file.path(SCENARIO$model_input,"pathogen_inputs.csv"), stringsAsFactors = FALSE)
-    pathogen_row <- which(pathogen_inputs$name==SCENARIO$pathogen)
+    if(SCENARIO$pathogen_name!=''){
+      pathogen_row <- which(pathogen_inputs$name==SCENARIO$pathogen_name)
+    }
+    else{
+      pathogen_row <- which(pathogen_inputs$pathogenType==SCENARIO$pathogen_type) 
+    }
     if(length(pathogen_row)<1){
-      log_error("No pathogen information found for pathogen {SCENARIO$pathogen}")
+      log_error("No pathogen information found for pathogen {SCENARIO$pathogen_type} {SCENARIO$pathogen_name}")
       stop()
+    }
+    else if(length(pathogen_row)>1){
+      log_warn("Multiple options found to select pathogen from pathogen inputs file.")
+      pathogen_row <- pathogen_row[1]
     }
     pathogen <- pathogen_inputs[pathogen_row,]
   }
   # assume pathogen_type is given and HUMAN_DATA contains incidence, shreddingrate and shredding duration for pathogen types.
   else{
     # no other information is needed in this case
-    pathogen <- data.frame(pathogenType=SCENARIO$pathogen_type)
+    pathogen <- data.frame(pathogenType=SCENARIO$pathogen_type, name="")
   }
+  pathogen_params <- logger.get.table(pathogen)
+  log_info("Model initialized with following pathogen params: \n{pathogen_params}")
   return(pathogen)
 }
 

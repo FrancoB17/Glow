@@ -18,3 +18,13 @@ logger.init <- function(log_file=NULL){
     log_info("Loaded package {package$Package} {package$Version} ")
   }
 }
+
+logger.get.table <- function(df){
+  params_table <- ""
+  for(par in colnames(df)){
+    par_value <- df[[par]]
+    entry <- sprintf("%s = %s\n",par,par_value)
+    params_table <- paste(params_table,entry)
+  }
+  return(params_table)
+}

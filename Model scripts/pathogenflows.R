@@ -245,12 +245,12 @@ pathogenflow.run <- function(pathogen){
 
 pathogenflow.get.input <- function(area_type,human_type, pathogen_type){
   #@Nynke: population is population per human type (adult/child) or total population?
-  col_names <- c("iso","scenario","region","flushSewer","flushSeptic","flushPit","flushOpen","flushUnknown","pitSlab","pitNoSlab","compostingToilet","bucketLatrine",
+  col_names <- c("gid","scenario","region","flushSewer","flushSeptic","flushPit","flushOpen","flushUnknown","pitSlab","pitNoSlab","compostingToilet","bucketLatrine",
                  "containerBased","hangingToilet","openDefecation","other","coverBury","sewageTreated","fecalSludgeTreated","isWatertight","hasLeach",
-                 "emptyFrequency", "pitAdditive", "urine")  
+                 "emptyFrequency", "pitAdditive", "urine","twinPits")  
   onsite_data <- data.frame(matrix(ncol=length(col_names),nrow = dim(HUMAN_DATA)[1]))
   colnames(onsite_data) <- col_names
-  onsite_data$iso <- HUMAN_DATA$iso
+  onsite_data$gid <- HUMAN_DATA$gid
   onsite_data$region <- HUMAN_DATA$subarea
   shedding_rate_col <- sprintf("sheddingRate_%s", tolower(pathogen_type))
   # set shedding rate for pathogen
