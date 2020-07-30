@@ -1,5 +1,6 @@
 
 wwtp.run <- function(emissions,pathogen,popurban_grid,poprural_grid,wwtp_inputs=NULL){
+  pathogen_treatment <- 0
   if(SCENARIO$wwtp_available ==3){
     if(SCENARIO$loadings_module == 1){
       # TODO: move this to human_emissions
@@ -58,8 +59,7 @@ wwtp.run <- function(emissions,pathogen,popurban_grid,poprural_grid,wwtp_inputs=
   temp<-data.frame(bla=NaN,value=0)
   pathogen_urban_water_grid<-subs(pathogen_urban_water_grid,temp,subsWithNA=F)
   pathogen_rural_water_grid<-subs(pathogen_rural_water_grid,temp,subsWithNA=F)
-  
-  pathogen_water_grid<-pathogen_urban_water_grid+pathogen_rural_water_grid
+  pathogen_water_grid<-pathogen_urban_water_grid+pathogen_rural_water_grid + pathogen_treatment
   
   #for emissions to land
   pathogen_urban_land_pp<-data.frame(iso=emissions$iso,value=emissions$pathogen_urb_landforgrid_pp)

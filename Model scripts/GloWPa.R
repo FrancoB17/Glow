@@ -40,7 +40,8 @@ SCENARIO <<- data.frame(
   wwtp_available = 1,
   WWTPData_filename="",
   hydrology_available = FALSE,
-  resolution = 0.008333,stringsAsFactors = FALSE
+  resolution = 0.008333,stringsAsFactors = FALSE,
+  save_emissions = T
   )
 
 STATE <<- "not started"
@@ -125,11 +126,17 @@ glowpa.run <- function(scenario,human_data,isoraster,popurban,poprural,wwtp_inpu
     log_info("Writing raster output")
     writeRaster(OUTPUT$grid$pathogen_water,out_file,format="GTiff",overwrite=TRUE)
     OUTPUT$files$pathogen_water_grid = out_file 
+    if(SCENARIO$save_emissions){
+      log_info("Writing csv output")
+      out_csv <- file.path(SCENARIO$model_output,sprintf("humanemissions_%s_%s.csv",PATHOGEN$name,SCENARIO$run))
+      write.csv(OUTPUT$emissions,out_csv)
+    }
     STATE <<- "finished"
     log_info("finished scenario run with id {SCENARIO$run}")
   }, warning = function(warning_condition) {
     log_warn("{warning_condition$message}")
   }, error = function(error_condition) {
+    STATE <<- "error"
    log_error("{error_condition}")
   })
   toc(log=T)

@@ -60,7 +60,8 @@ function(human_data,isoraster,popurban,poprural,wwtp,level,wkt_extent,pathogen_t
     resolution=0.008333, 
     loadings_module=2,
     wwtp_available=wwtp_available,
-    run=1, stringsAsFactors = F)
+    run=1, 
+    save_emissions=F,stringsAsFactors = F)
   glowpa_output <- glowpa.run(scenario[1,],human_data,isoraster_grid,popurban_grid,poprural_grid,wwtp_input)
   # overwrite raster with log10 values
   glowpa_output$grid$pathogen_water <- log10(glowpa_output$grid$pathogen_water)

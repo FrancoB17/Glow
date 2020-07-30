@@ -37,6 +37,13 @@ pathogenflow.run <- function(pathogen){
     age_type <- calc_combination[2]
     all_loadings[[area_type]][[age_type]] <- loadings[[calc_id]]
   }
+  
+  # uncomment for saving intermediate results  
+  # for(i in names(unlist(all_loadings, recursive = F))){
+  #   browser()
+  #   write.csv(unlist(all_loadings,recursive = F)[[i]]$output,file.path(SCENARIO$model_output,sprintf("loadings_%s_%s_%s.csv",i,PATHOGEN$name,SCENARIO$run)))
+  # }
+  
   # add child  + adult loadings for sanitation and areas
   # apply to area types urban/rural
   for(area_type in names(all_loadings)){
@@ -48,10 +55,12 @@ pathogenflow.run <- function(pathogen){
     adult <- area_loadings$adult$det
     child <- area_loadings$child$det
     # apply to all sub areas
-    for(sub_area in 1:length(emissions$subarea)){
-      ncols <- ncol(adult[[sub_area]])
-      sanitation_types <- adult[[sub_area]]$id
-      emissions_sanitation <- adult[[sub_area]][3:ncols] + child[[sub_area]][3:ncols]
+    for(i in 1:length(emissions$iso)){
+      iso_code <- emissions$iso[i]
+      gid <- HUMAN_DATA$gid[HUMAN_DATA$iso==iso_code]
+      ncols <- ncol(adult[[gid]])
+      sanitation_types <- adult[[gid]]$id
+      emissions_sanitation <- adult[[gid]][3:ncols] + child[[gid]][3:ncols]
       
       # apply to all sanitation types
       for(j in 1:length(sanitation_types)){
