@@ -105,13 +105,13 @@ glowpa.run <- function(scenario,human_data,isoraster,popurban,poprural,wwtp_inpu
       OUTPUT$emissions$pathogen_urb_onsite_land <<-0.025*OUTPUT$emissions$pathogen_urb_onsite_land
       OUTPUT$emissions$pathogen_rur_onsite_land <<-0.025*OUTPUT$emissions$pathogen_rur_onsite_land
       # save in asci grid format
-      writeRaster(OUTPUT$grid$pathogen_water,file.path(SCENARIO$model_output,sprintf("humanemissions_%s%s",PATHOGEN$name,SCENARIO$run)), format="ascii", overwrite=TRUE)
+      writeRaster(OUTPUT$grid$pathogen_water,file.path(SCENARIO$model_output,sprintf("humanemissions_%s_%s",PATHOGEN$name,SCENARIO$run)), format="ascii", overwrite=TRUE)
       
       library(tidyverse)
       library(dplyr)
       # save emissions to csv
       selection <- emissions %>% select(1:16)
-      write.csv(selection, file=file.path(SCENARIO$model_output,sprintf("HumanEmissionsCalculated_%s%s.csv",PATHOGEN$name,SCENARIO$run)))
+      write.csv(selection, file=file.path(SCENARIO$model_output,sprintf("HumanEmissionsCalculated_%s_%s.csv",PATHOGEN$name,SCENARIO$run)))
       detach("package:tidyverse", unload=TRUE)
       detach("package:dplyr", unload=TRUE)
     }
