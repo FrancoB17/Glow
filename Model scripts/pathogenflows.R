@@ -272,9 +272,8 @@ pathogenflow.get.input <- function(area_type,human_type, pathogen_type){
   # set shedding duration for pathogen type
   shedding_duration_col <- sprintf("shedding_duration_%s",tolower(pathogen_type))
   if(shedding_duration_col %in% colnames(HUMAN_DATA)){
-    HUMAN_DATA$shedding_duration <<- HUMAN_DATA[[shedding_rate_col]]
+    HUMAN_DATA$shedding_duration <<- HUMAN_DATA[[shedding_duration_col]]
   }
-  
   input_col_names <- colnames(HUMAN_DATA)
   if(area_type=="urban"){
     postfix <- "urb"
@@ -301,28 +300,12 @@ pathogenflow.get.input <- function(area_type,human_type, pathogen_type){
   incidence <- 0
   # set population and incidence
   if(human_type == "child"){
-    onsite_data$population <- HUMAN_DATA$population * HUMAN_DATA$fraction_pop_under5
+    onsite_data$population <- onsite_data$population * HUMAN_DATA$fraction_pop_under5
     age_post_fix <- "under5"
-    if(area_type == "urban"){
-      onsite_data$population <- onsite_data$population * HUMAN_DATA$fraction_urban_pop
-      #incidence <-HUMAN_DATA$incidence_urban_under5
-    }
-    else if(area_type == "rural"){
-      onsite_data$population <- onsite_data$population * (1 - HUMAN_DATA$fraction_urban_pop)
-      #incidence <- HUMAN_DATA$incidence_rural_under5
-    }
   }
   else if(human_type == "adult"){
-    onsite_data$population <- HUMAN_DATA$population * (1-HUMAN_DATA$fraction_pop_under5)
+    onsite_data$population <- onsite_data$population * (1-HUMAN_DATA$fraction_pop_under5)
     age_post_fix <- "5plus"
-    if(area_type == "urban"){
-      onsite_data$population <- onsite_data$population * HUMAN_DATA$fraction_urban_pop
-      #incidence <-HUMAN_DATA$incidence_urban_5plus
-    }
-    else if(area_type == "rural"){
-      onsite_data$population <- onsite_data$population * (1 - HUMAN_DATA$fraction_urban_pop)
-      #incidence <- HUMAN_DATA$incidence_rural_5plus
-    }
   }
   # find the right incidence for urban/child and pathogen type
   incidence_col_name <- sprintf("incidence_%s_%s",area_type,age_post_fix)
