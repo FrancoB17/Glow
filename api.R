@@ -7,7 +7,7 @@ source("./Model scripts/readers.R")
 source("./Model scripts/GloWPa.R")
 
 #' @post /scenario
-function(human_data,isoraster,popurban,poprural,wwtp,level,wkt_extent,pathogen_type,wwtp_available,resolution){
+function(human_data,isoraster,popurban,poprural,wwtp,level,wkt_extent,pathogen_type,wwtp_available){
   # wkt_extent <-  "POLYGON ((29.5715 -1.48214, 35.00027 -1.48214, 35.00027 4.234466, 29.5715 4.234466, 29.5715 -1.48214))"
   # TODO: isoraster, population grids will be stored on server???
   if(missing(human_data) ||  is.null(human_data) || missing(isoraster) || is.null(isoraster) || missing(popurban) || is.null(popurban) || missing(poprural) || is.null(poprural)){
@@ -53,7 +53,8 @@ function(human_data,isoraster,popurban,poprural,wwtp,level,wkt_extent,pathogen_t
   dir.create(model_ouput,recursive = T,showWarnings = F)
   # setup scenario options for mapping tool
   if(missing(resolution) || is.null(resolution)){
-    resolution <- 0.008333
+    # assume xres and yres are identical
+    resolution <- raster::xres(isoraster_grid)
   }
   scenario <- data.frame(
     pathogen_type = pathogen_type,
