@@ -7,10 +7,10 @@ source("./Model scripts/readers.R")
 source("./Model scripts/GloWPa.R")
 
 #' @post /scenario
-function(human_data,isoraster,popurban,poprural,wwtp,level,wkt_extent,pathogen_type,wwtp_available){
+function(human_data,isoraster,popurban,poprural,wwtp,level,wkt_extent,pathogen_type,wwtp_available,resolution){
   # wkt_extent <-  "POLYGON ((29.5715 -1.48214, 35.00027 -1.48214, 35.00027 4.234466, 29.5715 4.234466, 29.5715 -1.48214))"
   # TODO: isoraster, population grids will be stored on server???
-  if(missing(human_data) || missing(isoraster) || missing(popurban) || missing(poprural)){
+  if(missing(human_data) ||  is.null(human_data) || missing(isoraster) || is.null(isoraster) || missing(popurban) || is.null(popurban) || missing(poprural) || is.null(poprural)){
     stop("Error: missing arguments")
   }
   human_data <- read.csv(text = human_data)
@@ -24,7 +24,7 @@ function(human_data,isoraster,popurban,poprural,wwtp,level,wkt_extent,pathogen_t
   poprural_grid <- grids$rural
   popurban_grid <- grids$urban
   #isoraster_grid <- readers.read.raster(isoraster)
-  if(missing(level)){
+  if(missing(level) || is.null(level)){
     gadm_level <- 0
   }
   else{
@@ -38,26 +38,29 @@ function(human_data,isoraster,popurban,poprural,wwtp,level,wkt_extent,pathogen_t
   isoraster_grid <- crop(isoraster_grid,borders)
 
   wwtp_input <- NULL
-  if(!missing(wwtp)){
+  if(!missing(wwtp) || !is.null(wwtp)){
     wwtp_input <- readers.read.wwtp(wwtp)
   }
 
-  if(missing(pathogen_type)){
+  if(missing(pathogen_type) || is.null(pathogen_type)){
     pathogen_type <- "Virus"
   }
-  if(missing(wwtp_available)){
+  if(missing(wwtp_available) || is.null(wwtp_available)){
     wwtp_available <- 2
   }
   # create directory for output
   model_ouput <- file.path("./Model output/",Sys.getpid())
   dir.create(model_ouput,recursive = T,showWarnings = F)
   # setup scenario options for mapping tool
+  if(missing(resolution) || is.null(resolution)){
+    resolution <- 0.008333
+  }
   scenario <- data.frame(
     pathogen_type = pathogen_type,
     pathogen_name = "",
     use_pathogen_file = TRUE,
     model_output = model_ouput, 
-    resolution=0.008333, 
+    resolution=resolution, 
     loadings_module=2,
     wwtp_available=wwtp_available,
     run=1, 
