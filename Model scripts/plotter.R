@@ -22,7 +22,8 @@ plotter.plot.map <- function(grid,out_file,col, breaks,width,height,boundaries){
   }
   tryCatch({
     png(filename = out_file, width = width, height = height, units = "px")
-    par(lwd=1,mar=c(6,1,1,1),ps=18,bty="n")
+    # we set bg to gray, because it the color of missing data
+    par(lwd=1,mar=c(6,1,1,1),ps=18,bty="n",bg="gray")
     plot(grid,col=col,breaks=breaks,legend=FALSE,axes=FALSE)
     
     if(!missing(boundaries)){
@@ -42,6 +43,9 @@ plotter.plot.map <- function(grid,out_file,col, breaks,width,height,boundaries){
     
     legend_text <- sprintf("%s emissions %s",pathogen_text,unit)
     labels <- breaks
+    if(breaks[1] < 0){
+      labels[1] <- "NA"
+    }
     if(breaks[length(breaks)]==Inf){
       labels[length(labels)] <- sprintf(">%s",breaks[length(breaks)-1])
       breaks[length(breaks)] <- breaks[length(breaks)-1] + (breaks[length(breaks)-1] - breaks[length(breaks)-2])
