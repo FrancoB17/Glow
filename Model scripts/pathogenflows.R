@@ -87,8 +87,7 @@ pathogenflow.run <- function(pathogen){
     HUMAN_DATA$removalfraction <<- HUMAN_DATA[[removal_fraction_col]]
   }
   else{
-    HUMAN_DATA$removalfraction<-1- sum(HUMAN_DATA$FractionPrimarytreatment*pathogen$RemovalPrimary,HUMAN_DATA$FractionSecondarytreatment*pathogen$RemovalSecondary+
-                                     HUMAN_DATA$FractionTertiarytreatment*pathogen$RemovalTertiary,HUMAN_DATA$FractionQuaternarytreatment*pathogen$RemovalQuaternary,HUMAN_DATA$FractionPonds*pathogen$RemovalPonds, na.rm = T)  
+    HUMAN_DATA$removalfraction<-HUMAN_DATA$fEmitted_inEffluent_after_treatment 
   }
   # TODO: check with @Nynke. Can we ussume this?
   HUMAN_DATA$removalfraction <- replace(HUMAN_DATA$removalfraction, is.na(HUMAN_DATA$removalfraction),1)
