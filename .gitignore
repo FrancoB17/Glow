@@ -7,3 +7,5 @@ logs/
 *_sp.rds
 Model output
 tmp
+Model input/*
+local_env.R
