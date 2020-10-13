@@ -81,7 +81,8 @@ function(human_data,isoraster,popurban,poprural,wwtp,level,wkt_extent,pathogen_t
     resolution=resolution, 
     loadings_module=2,
     wwtp_available=wwtp_available,
-    run=1, 
+    run=1,
+    gadm_level = gadm_level,
     save_emissions=F,stringsAsFactors = F)
   glowpa_output <- glowpa.run(scenario[1,],human_data,isoraster_grid,popurban_grid,poprural_grid,wwtp_input)
   # overwrite raster with log10 values
