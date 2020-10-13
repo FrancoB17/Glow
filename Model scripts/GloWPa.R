@@ -30,7 +30,7 @@ SCENARIO <<- data.frame(
   run = 1,
   loadings_module=1,
   pathogen_name ="rotavirus",
-  pathogen_type = "Virus",
+  pathogen_type = "Viruses",
   use_pathogen_file = TRUE,
   model_input ="./Model input", 
   model_output = "./Model output",
@@ -39,6 +39,7 @@ SCENARIO <<- data.frame(
   population_rural_filename = "poprural.tif",
   wwtp_available = 1,
   WWTPData_filename="",
+  gadm_level=1,
   hydrology_available = FALSE,
   resolution = 0.008333,stringsAsFactors = FALSE,
   save_emissions = T
@@ -69,9 +70,11 @@ glowpa.run <- function(scenario,human_data,isoraster,popurban,poprural,wwtp_inpu
     dir.create(SCENARIO$model_output,recursive = T,showWarnings = F)
     # search pathogen information
     PATHOGEN <<- pathogen.get()
-    tic("preprocess population")
-    populations <- population.preprocess(popurban,poprural)
-    toc(log=T)
+    if(SCENARIO$gadm_level!=4){
+      tic("preprocess population")
+      populations <- population.preprocess(popurban,poprural)
+      toc(log=T)
+    }
     if(SCENARIO$loadings_module==1){
       log_error("Human emissions module not yet implemented in this version.")
       stop()
@@ -83,30 +86,43 @@ glowpa.run <- function(scenario,human_data,isoraster,popurban,poprural,wwtp_inpu
       toc(log=T)
     }
     
-    #calculate emissions pp
-    OUTPUT$emissions <<- emissions.calc.avg.pp(OUTPUT$emissions)
+    if(SCENARIO$gadm_level!=4){
+      #calculate emissions pp
+      OUTPUT$emissions <<- emissions.calc.avg.pp(OUTPUT$emissions)
+    }
     # replace na values with 0
     # TODO: check if this is needed in all cases
     OUTPUT$emissions <<- emissions.na.replace(OUTPUT$emissions)
-    # apply wwtp
-    tic("WWTP plan module")
-    wwtp_output <- wwtp.run(OUTPUT$emissions, PATHOGEN, populations$urban, populations$rural, wwtp_input)
-    toc(log=T)
+    
+    if(SCENARIO$gadm_level!=4){
+      # apply wwtp
+      tic("WWTP plan module")
+      wwtp_output <- wwtp.run(OUTPUT$emissions, PATHOGEN, populations$urban, populations$rural, wwtp_input)
+      toc(log=T)
+    } else{
+      tic("WWTP plan module level 4")
+      wwtp_output <- wwtp_level4.run(OUTPUT$emissions,PATHOGEN,wwtp_input)
+      toc(log=T)
+    }
     OUTPUT$emissions <<- wwtp_output$emissions
-    OUTPUT$grid <<- wwtp_output$grid
+    if(SCENARIO$gadm_level!=4){
+      OUTPUT$grid <<- wwtp_output$grid
+    }
     if(SCENARIO$hydrology_available){
       stop("ERROR: Hydrology not implemented in this version")
     }
     else if(SCENARIO$loadings_module==1){
       # TODO: think about moving this to human_emissions.R specific code.
-      OUTPUT$grid$pathogen_land <<-0.025*OUTPUT$grid$pathogen_land
-      OUTPUT$grid$pathogen_water <<- OUTPUT$grid$pathogen_water + OUTPUT$grid$pathogen_land
+      if(SCENARIO$gadm_level!=4){
+        OUTPUT$grid$pathogen_land <<-0.025*OUTPUT$grid$pathogen_land
+        OUTPUT$grid$pathogen_water <<- OUTPUT$grid$pathogen_water + OUTPUT$grid$pathogen_land
+        writeRaster(OUTPUT$grid$pathogen_water,file.path(SCENARIO$model_output,sprintf("humanemissions_%s_%s",PATHOGEN$name,SCENARIO$run)), format="ascii", overwrite=TRUE)
+      }
       OUTPUT$emissions$pathogen_urb_dif <<-0.025*OUTPUT$emissions$pathogen_urb_dif
       OUTPUT$emissions$pathogen_rur_dif <<-0.025*OUTPUT$emissions$pathogen_rur_dif
       OUTPUT$emissions$pathogen_urb_onsite_land <<-0.025*OUTPUT$emissions$pathogen_urb_onsite_land
       OUTPUT$emissions$pathogen_rur_onsite_land <<-0.025*OUTPUT$emissions$pathogen_rur_onsite_land
       # save in asci grid format
-      writeRaster(OUTPUT$grid$pathogen_water,file.path(SCENARIO$model_output,sprintf("humanemissions_%s_%s",PATHOGEN$name,SCENARIO$run)), format="ascii", overwrite=TRUE)
       
       library(tidyverse)
       library(dplyr)
@@ -118,14 +134,18 @@ glowpa.run <- function(scenario,human_data,isoraster,popurban,poprural,wwtp_inpu
     }
     else if(SCENARIO$loadings_module==2){
       totals <- pathogenflow.calc.totals(OUTPUT$emissions)
+      write.csv(OUTPUT$emissions,file.path(SCENARIO$model_output,sprintf("humanemissions_%s_%s_intermediate.csv",PATHOGEN$name,SCENARIO$run)))
       OUTPUT$emissions <<- totals
     }
-    # save geotiff
-    OUTPUT$grid$pathogen_water[OUTPUT$grid$pathogen_water==0]<-NA
-    out_file <- file.path(SCENARIO$model_output,sprintf("humanemissions_%s_%s.tif",PATHOGEN$name,SCENARIO$run))
-    log_info("Writing raster output")
-    writeRaster(OUTPUT$grid$pathogen_water,out_file,format="GTiff",overwrite=TRUE)
-    OUTPUT$files$pathogen_water_grid = out_file 
+    
+    if(SCENARIO$gadm_level!=4){
+      # save geotiff
+      OUTPUT$grid$pathogen_water[OUTPUT$grid$pathogen_water==0]<-NA
+      out_file <- file.path(SCENARIO$model_output,sprintf("humanemissions_%s_%s.tif",PATHOGEN$name,SCENARIO$run))
+      log_info("Writing raster output")
+      writeRaster(OUTPUT$grid$pathogen_water,out_file,format="GTiff",overwrite=TRUE)
+      OUTPUT$files$pathogen_water_grid = out_file 
+    }
     if(SCENARIO$save_emissions){
       log_info("Writing csv output")
       out_csv <- file.path(SCENARIO$model_output,sprintf("humanemissions_%s_%s.csv",PATHOGEN$name,SCENARIO$run))
