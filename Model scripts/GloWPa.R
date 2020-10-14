@@ -134,7 +134,6 @@ glowpa.run <- function(scenario,human_data,isoraster,popurban,poprural,wwtp_inpu
     }
     else if(SCENARIO$loadings_module==2){
       totals <- pathogenflow.calc.totals(OUTPUT$emissions)
-      write.csv(OUTPUT$emissions,file.path(SCENARIO$model_output,sprintf("humanemissions_%s_%s_intermediate.csv",PATHOGEN$name,SCENARIO$run)))
       OUTPUT$emissions <<- totals
     }
     
