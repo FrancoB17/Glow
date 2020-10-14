@@ -172,16 +172,16 @@ wwtp_level4.run <- function(emissions,pathogen,wwtp_inputs=NULL){
   return(list(emissions=emissions))
 }
 
-wwtp.calc.treatment <- function(emissions,pathogen,wwtp_inputs){
+wwtp.calc.treatment <- function(pathogen,emissions,wwtp_inputs){
   pathogen_treatment <- ISORASTER
   pathogen_treatment[] <- 0
   wwtp_inputs$subarea<-raster::extract(ISORASTER,matrix(data=c(wwtp_inputs$Lon,wwtp_inputs$Lat),nrow=length(wwtp_inputs$Lon),ncol=2))
   pathogen_type <- pathogen$pathogenType
 
   removal_fraction_col <- sprintf("fEmitted_inEffluent_after_treatment_%s",tolower(pathogen_type))
-  
+
   if(removal_fraction_col %in% colnames(wwtp_inputs)){
-    wwtp_inputs$emittedfraction <<- wwtp_inputs[[removal_fraction_col]]
+    wwtp_inputs$emittedfraction <- wwtp_inputs[[removal_fraction_col]]
   }
   else{
     wwtp_inputs$emittedfraction<-wwtp_inputs$fEmitted_inEffluent_after_treatment 
