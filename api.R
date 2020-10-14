@@ -94,7 +94,8 @@ function(human_data,isoraster,popurban,poprural,wwtp,level,wkt_extent,pathogen_t
   if(level==0){
     boundaries_plot <- rnaturalearth::ne_countries(scale=50,returnclass = "sp")
   }
-  plot_path <- plotter.plot.map(glowpa_output$grid$pathogen_water,col=cols,breaks=brks,boundaries=boundaries_plot)
+  plot_extent <- as_Spatial(st_as_sfc(wkt_extent)) 
+  plot_path <- plotter.plot.map(glowpa_output$grid$pathogen_water,col=cols,breaks=brks,boundaries=boundaries_plot, extent=plot_extent)
   response <- list(
     grid=list(
       file=glowpa_output$files$pathogen_water_grid,

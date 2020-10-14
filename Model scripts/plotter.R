@@ -2,18 +2,37 @@ library(rgdal)
 library(sp)
 library(khroma)
 
-plotter.plot.map <- function(grid,out_file,col, breaks,width,height,boundaries){
+#' Plot pathogen map
+#'
+#' @param grid 
+#' @param out_file 
+#' @param col 
+#' @param breaks 
+#' @param width 
+#' @param height 
+#' @param boundaries 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+plotter.plot.map <- function(grid,out_file,col, breaks,width,height,boundaries,extent=NULL){
+  # determine a plot title. Either pathogen name, pathogen type or nothing
   pathogen_text <- if(!is.null(PATHOGEN$name) || !PATHOGEN$name == '') PATHOGEN$name else if(!is.null(PATHOGEN$pathogenType || !PATHOGEN$pathogenType))SCENARIO$pathogenType else ""
+  # construct output path for plot if out_file is not givevn.
   if(missing(out_file)){
     fname <- sprintf("humanemissions_%s_%s.png",pathogen_text,SCENARIO$run)
     out_file <- file.path(SCENARIO$model_output,fname)
   }
+  # set default colors if array of colors is missing
   if(missing(col)){
     col < -c("slateblue4","slateblue4","blue","skyblue","limegreen", "yellow", "darkorange","red2","red4","red4")
   }
+  # calculate class breaks for plot based on grid if the breaks are not given to function.
   if(missing(breaks)){
     breaks <- plotter.calc.breaks(grid)
   }
+  # set default width and height if not specified.
   if(missing(width)){
     width <- 750
   }
@@ -24,8 +43,8 @@ plotter.plot.map <- function(grid,out_file,col, breaks,width,height,boundaries){
     png(filename = out_file, width = width, height = height, units = "px")
     # we set bg to gray, because it the color of missing data
     par(lwd=1,mar=c(6,1,1,1),ps=18,bty="n",bg="gray")
-    plot(grid,col=col,breaks=breaks,legend=FALSE,axes=FALSE)
-    
+    plot(grid,col=col,breaks=breaks,legend=FALSE,axes=FALSE,ext=extent)
+    # plot administrative borders if given to function on top of the grid.
     if(!missing(boundaries)){
       plot(boundaries, add=T)
     }
@@ -46,8 +65,10 @@ plotter.plot.map <- function(grid,out_file,col, breaks,width,height,boundaries){
     if(breaks[1] < 0){
       labels[1] <- "NA"
     }
+    # if last class break is equal to infinity set label > previous last class break.
     if(breaks[length(breaks)]==Inf){
       labels[length(labels)] <- sprintf(">%s",breaks[length(breaks)-1])
+      # modify the last class break value in case of infinity for the legend by using the previous last class break and difference between breaks.
       breaks[length(breaks)] <- breaks[length(breaks)-1] + (breaks[length(breaks)-1] - breaks[length(breaks)-2])
     }
     plot(grid, legend.only=TRUE, col=col,breaks=breaks,horizontal=TRUE,
