@@ -352,7 +352,7 @@ pathogenflow.calc.totals <- function(emissions){
   totals$total_other_out<- rowSums(cbind(emissions$to_fecalSludge_other_urb_out,emissions$to_surface_other_urb_out,emissions$to_fecalSludge_other_rur_out,emissions$to_surface_other_rur_out), na.rm = T)
   
   for (i in 1:length(HUMAN_DATA$iso)){
-    if(sum(as.numeric(totals[i,3:15]))==0 && sum(as.numeric(HUMAN_DATA[i,21:33]),na.rm=TRUE)+sum(as.numeric(HUMAN_DATA[i,44:56]),na.rm=TRUE)==0){
+    if(sum(as.numeric(totals[i,3:15]),na.rm=TRUE)==0 && sum(as.numeric(HUMAN_DATA[i,21:33]),na.rm=TRUE)+sum(as.numeric(HUMAN_DATA[i,44:56]),na.rm=TRUE)==0){
       totals[i,3:15]<-NA      
     }
   }
