@@ -89,9 +89,7 @@ function(human_data,isoraster,popurban,poprural,wwtp,level,wkt_extent,pathogen_t
   if(level != 4){
     glowpa_output$grid$pathogen_water <- log10(glowpa_output$grid$pathogen_water)
     writeRaster(glowpa_output$grid$pathogen_water,filename = glowpa_output$files$pathogen_water_grid, overwrite=T)
-  } else {
-    glowpa_output$emissions<-log10(glowpa_output$emissions)
-  }
+  } 
   brks<-c(-1,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,Inf)
   cols <- plotter.get.colors.khroma("discrete rainbow",18)
   boundaries_plot <- borders
