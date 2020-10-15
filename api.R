@@ -86,8 +86,12 @@ function(human_data,isoraster,popurban,poprural,wwtp,level,wkt_extent,pathogen_t
     save_emissions=F,stringsAsFactors = F)
   glowpa_output <- glowpa.run(scenario[1,],human_data,isoraster_grid,popurban_grid,poprural_grid,wwtp_input)
   # overwrite raster with log10 values
-  glowpa_output$grid$pathogen_water <- log10(glowpa_output$grid$pathogen_water)
-  writeRaster(glowpa_output$grid$pathogen_water,filename = glowpa_output$files$pathogen_water_grid, overwrite=T)
+  if(level != 4){
+    glowpa_output$grid$pathogen_water <- log10(glowpa_output$grid$pathogen_water)
+    writeRaster(glowpa_output$grid$pathogen_water,filename = glowpa_output$files$pathogen_water_grid, overwrite=T)
+  } else {
+    glowpa_output$emissions<-log10(glowpa_output$emissions)
+  }
   brks<-c(-1,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,Inf)
   cols <- plotter.get.colors.khroma("discrete rainbow",18)
   boundaries_plot <- borders
@@ -95,14 +99,21 @@ function(human_data,isoraster,popurban,poprural,wwtp,level,wkt_extent,pathogen_t
     boundaries_plot <- rnaturalearth::ne_countries(scale=50,returnclass = "sp")
   }
   plot_extent <- as_Spatial(st_as_sfc(wkt_extent)) 
-  plot_path <- plotter.plot.map(glowpa_output$grid$pathogen_water,col=cols,breaks=brks,boundaries=boundaries_plot, extent=plot_extent)
-  response <- list(
-    grid=list(
-      file=glowpa_output$files$pathogen_water_grid,
-      min=minValue(glowpa_output$grid$pathogen_water), 
-      max=maxValue(glowpa_output$grid$pathogen_water)),
-    figs = c(plot_path), 
-    emissions=glowpa_output$emissions)
+  if(level != 4){
+    plot_path <- plotter.plot.map(glowpa_output$grid$pathogen_water,col=cols,breaks=brks,boundaries=boundaries_plot, extent=plot_extent)
+    response <- list(
+      grid=list(
+        file=glowpa_output$files$pathogen_water_grid,
+        min=minValue(glowpa_output$grid$pathogen_water), 
+        max=maxValue(glowpa_output$grid$pathogen_water)),
+      figs = c(plot_path), 
+      emissions=glowpa_output$emissions)
+  }else{
+    plot_path <- plotter.plot.map.level4(glowpa_output$emissions,col=cols,breaks=brks,boundaries=boundaries_plot, extent=plot_extent)
+    response <- list(
+      figs = c(plot_path), 
+      emissions=glowpa_output$emissions)
+  }
   
   return(jsonlite::toJSON(response))
 }
