@@ -47,16 +47,14 @@ plotter.plot.map <- function(grid,out_file,col, breaks,width,height,boundaries,e
     # plot administrative borders if given to function on top of the grid.
     if(!missing(boundaries)){
       plot(boundaries, add=T)
-    }
-    else{
+    }else{
       log_warn("Missing arguments. Cannot plot boundaries.")
     }
     unit <- ""
     # plot legend
     if(PATHOGEN$name == "cryptosporidium" || PATHOGEN$pathogenType == "Protozoa"){
       unit <- "(log10 oocysts / year)"
-    }
-    else if(PATHOGEN$name == "rotavirus" || PATHOGEN$pathogenType == "Virus"){
+    }else if(PATHOGEN$name == "rotavirus" || PATHOGEN$pathogenType == "Virus"){
       unit <- "(log10 viral particles / year)"
     }
     
@@ -80,6 +78,103 @@ plotter.plot.map <- function(grid,out_file,col, breaks,width,height,boundaries,e
   },finally={
     dev.off()
   })
+  return(out_file)
+}
+
+plotter.plot.map.level4 <- function(emissions,out_file,col,breaks,width,height,boundaries,extent=NULL){
+  
+  library(grid)
+
+  if(!missing(boundaries)){
+    #prepare data and make it ready for plotting. That includes linking it to the boundaries data
+    
+    boundariesdf<-data.frame(boundaries@data$GID_4,boundaries@data$NAME_4)
+    colnames(boundariesdf)<-c("gid","name")
+    boundariesdf$iso<-NA
+    
+    for(i in 1:length(HUMAN_DATA$gid)){
+      a<-which(boundariesdf$gid==HUMAN_DATA$gid[i])
+      if(length(a)>0){
+        boundariesdf$iso[a]<-HUMAN_DATA$iso[i]
+      }
+    }
+    
+    emissions$total<-NA
+    for(i in 1:length(emissions$iso)){
+      emissions$total[i]<-sum(c(emissions$total_flushSewer_out[i],emissions$total_flushSeptic_out[i],emissions$total_flushPit_out[i],emissions$total_flushOpen_out[i],emissions$total_flushUnknown_out[i],emissions$total_pitSlab_out[i],emissions$total_flushpitNoSlab_out[i],emissions$total_compostingToilet_out[i],emissions$total_bucketLatrine_out[i],emissions$total_containerBased_out[i],emissions$total_hangingToilet_out[i],emissions$total_openDefecation_out[i],emissions$total_other_out[i]),na.rm=TRUE)
+    }
+    
+    for(i in 1:length(emissions$iso)){
+      if(sum(as.numeric(emissions[i,3:15]),na.rm=TRUE)==0 && sum(as.numeric(HUMAN_DATA[i,21:33]),na.rm=TRUE)+sum(as.numeric(HUMAN_DATA[i,44:56]),na.rm=TRUE)==0){
+        emissions$total[i]<-NA   
+      }  
+    }
+    
+    emissions$total1<-log10(emissions$total)
+    a<-which(emissions$total1=="-Inf")
+    emissions$total1[a]<-0
+    emissions$total<-emissions$total1
+    
+    boundaries@data$logemissions<-NA    
+    for(j in 1:length(emissions$iso)){
+      a<-which(boundariesdf$iso==emissions$iso[j])
+      boundaries@data$logemissions[a]<-emissions$total[j]
+    }
+    
+    # determine a plot title. Either pathogen name, pathogen type or nothing
+    pathogen_text <- if(!is.null(PATHOGEN$name) || !PATHOGEN$name == '') PATHOGEN$name else if(!is.null(PATHOGEN$pathogenType || !PATHOGEN$pathogenType))SCENARIO$pathogenType else ""
+    # construct output path for plot if out_file is not givevn.
+    if(missing(out_file)){
+      fname <- sprintf("humanemissions_%s_%s.png",pathogen_text,SCENARIO$run)
+      out_file <- file.path(SCENARIO$model_output,fname)
+    }
+    # set default colors if array of colors is missing
+    if(missing(col)){
+      col < -c("slateblue4","slateblue4","blue","skyblue","limegreen", "yellow", "darkorange","red2","red4","red4")
+    }
+    # calculate class breaks for plot based on grid if the breaks are not given to function.
+    if(missing(breaks)){
+      breaks <- plotter.calc.breaks(grid)
+    }
+    # set default width and height if not specified.
+    if(missing(width)){
+      width <- 750
+    }
+    if(missing(height)){
+      height <- 750
+    }
+    tryCatch({
+      png(filename = out_file, width = width, height = height, units = "px")
+      # we set bg to gray, because it the color of missing data
+      par(lwd=1,mar=c(6,1,1,1),ps=18,bty="n",bg="gray")
+      print(spplot(boundaries,"logemissions",col.regions=col,at=breaks,colorkey=list(labels = list(width = 4, cex = 2))))
+      
+      unit <- ""
+      # plot legend
+      if(PATHOGEN$name == "cryptosporidium" || PATHOGEN$pathogenType == "Protozoa"){
+        unit <- "(log10 oocysts / year)"
+      } else if(PATHOGEN$name == "rotavirus" || PATHOGEN$pathogenType == "Virus"){
+        unit <- "(log10 viral particles / year)"
+      }
+      
+      legend_text <- sprintf("%s emissions %s",pathogen_text,unit)      
+      
+      grid.text("legend_text", x=unit(0.85, "npc"), y=unit(0.55, "npc"), rot=90)
+      grid.text("missing data",x=unit(0.88,"npc"),y=unit(0.05,"npc"))
+      
+##    plot(,col=col,breaks=breaks,legend=FALSE,axes=FALSE,ext=extent)
+      # plot administrative borders if given to function on top of the grid.
+ #     plot(boundaries, add=T)
+
+    },finally={
+      dev.off()
+    })
+  }
+  else{
+    log_warn("Missing arguments. Cannot plot.png file.")
+  }
+  
+
   return(out_file)
 }
 
