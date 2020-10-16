@@ -18,7 +18,9 @@ function(human_data,isoraster,popurban,poprural,wwtp,level,wkt_extent,pathogen_t
   if(is.null(human_data) || is.null(isoraster) || is.null(popurban) || is.null(poprural)){
     stop("Error: missing arguments")
   }
+  human_data<-gsub("0.00001","NA",human_data)
   human_data <- read.csv(text = human_data)
+
   cl <- makeCluster(detectCores())
   clusterExport(cl,varlist = c('readers.read.raster','raster','log_info','tic','toc','ENV'))
   grids <- parLapply(cl,list(iso=isoraster,urban=popurban,rural=poprural),fun = function(x){
