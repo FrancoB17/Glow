@@ -90,6 +90,7 @@ plotter.plot.map.level4 <- function(emissions,out_file,col,breaks,width,height,b
     
     boundariesdf<-data.frame(boundaries@data$GID_4,boundaries@data$NAME_4)
     colnames(boundariesdf)<-c("gid","name")
+    boundariesdf[]<-lapply(boundariesdf,as.character)
     boundariesdf$iso<-NA
     
     for(i in 1:length(HUMAN_DATA$gid)){
