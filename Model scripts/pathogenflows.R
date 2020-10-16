@@ -357,6 +357,24 @@ pathogenflow.calc.totals <- function(emissions){
     }
   }
   
+  totals$total<-NA
+  for(i in 1:length(totals$iso)){
+    totals$total[i]<-sum(c(totals$total_flushSewer_out[i],totals$total_flushSeptic_out[i],totals$total_flushPit_out[i],totals$total_flushOpen_out[i],totals$total_flushUnknown_out[i],totals$total_pitSlab_out[i],totals$total_flushpitNoSlab_out[i],totals$total_compostingToilet_out[i],totals$total_bucketLatrine_out[i],totals$total_containerBased_out[i],totals$total_hangingToilet_out[i],totals$total_openDefecation_out[i],totals$total_other_out[i]),na.rm=TRUE)
+  }
+  
+  for(i in 1:length(totals$iso)){
+    if(sum(as.numeric(totals[i,3:15]),na.rm=TRUE)==0 && sum(as.numeric(HUMAN_DATA[i,21:33]),na.rm=TRUE)+sum(as.numeric(HUMAN_DATA[i,44:56]),na.rm=TRUE)==0){
+      totals$total[i]<-NA   
+    }  
+  }
+  
+  totals$total1<-log10(totals$total)
+  a<-which(totals$total1=="-Inf")
+  totals$total1[a]<-0
+  totals$total_log<-totals$total1
+  
+  totals$total1<-NULL
+  
   return(totals)
 }
 

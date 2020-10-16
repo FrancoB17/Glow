@@ -100,26 +100,10 @@ plotter.plot.map.level4 <- function(emissions,out_file,col,breaks,width,height,b
       }
     }
     
-    emissions$total<-NA
-    for(i in 1:length(emissions$iso)){
-      emissions$total[i]<-sum(c(emissions$total_flushSewer_out[i],emissions$total_flushSeptic_out[i],emissions$total_flushPit_out[i],emissions$total_flushOpen_out[i],emissions$total_flushUnknown_out[i],emissions$total_pitSlab_out[i],emissions$total_flushpitNoSlab_out[i],emissions$total_compostingToilet_out[i],emissions$total_bucketLatrine_out[i],emissions$total_containerBased_out[i],emissions$total_hangingToilet_out[i],emissions$total_openDefecation_out[i],emissions$total_other_out[i]),na.rm=TRUE)
-    }
-    
-    for(i in 1:length(emissions$iso)){
-      if(sum(as.numeric(emissions[i,3:15]),na.rm=TRUE)==0 && sum(as.numeric(HUMAN_DATA[i,21:33]),na.rm=TRUE)+sum(as.numeric(HUMAN_DATA[i,44:56]),na.rm=TRUE)==0){
-        emissions$total[i]<-NA   
-      }  
-    }
-    
-    emissions$total1<-log10(emissions$total)
-    a<-which(emissions$total1=="-Inf")
-    emissions$total1[a]<-0
-    emissions$total<-emissions$total1
-    
     boundaries@data$logemissions<-NA    
     for(j in 1:length(emissions$iso)){
       a<-which(boundariesdf$iso==emissions$iso[j])
-      boundaries@data$logemissions[a]<-emissions$total[j]
+      boundaries@data$logemissions[a]<-emissions$total_log[j]
     }
     
     # determine a plot title. Either pathogen name, pathogen type or nothing
