@@ -19,6 +19,7 @@ pathogenflow.run <- function(pathogen){
       onsite_data[[area_type]][[human_age_type]] <- pathogenflow.get.input(area_type,human_age_type,pathogen_type)
     }
   }
+
   tic("calc pathogenflows loadings")
   # for debugging inside getLoadings
   # loadings <- pathogenflows::getLoadings(onsite_data$urban$child,pathogen_type)
@@ -38,11 +39,11 @@ pathogenflow.run <- function(pathogen){
     all_loadings[[area_type]][[age_type]] <- loadings[[calc_id]]
   }
   
-  # uncomment for saving intermediate results  
-  # for(i in names(unlist(all_loadings, recursive = F))){
-  #   browser()
-  #   write.csv(unlist(all_loadings,recursive = F)[[i]]$output,file.path(SCENARIO$model_output,sprintf("loadings_%s_%s_%s.csv",i,PATHOGEN$name,SCENARIO$run)))
-  # }
+# uncomment for saving intermediate results  
+# for(i in names(unlist(all_loadings, recursive = F))){
+##   browser()
+#   write.csv(unlist(all_loadings,recursive = F)[[i]]$output,file.path(SCENARIO$model_output,sprintf("loadings_%s_%s_%s.csv",i,PATHOGEN$name,SCENARIO$run)))
+# }
   
   # add child  + adult loadings for sanitation and areas
   # apply to area types urban/rural
@@ -54,14 +55,15 @@ pathogenflow.run <- function(pathogen){
     area_loadings <- all_loadings[[area_type]]
     adult <- area_loadings$adult$det
     child <- area_loadings$child$det
+    
     # apply to all sub areas
     for(i in 1:length(emissions$iso)){
       iso_code <- emissions$iso[i]
-      gid <- HUMAN_DATA$gid[HUMAN_DATA$iso==iso_code]
+      gid <- as.character(HUMAN_DATA$gid[HUMAN_DATA$iso==iso_code])
       ncols <- ncol(adult[[gid]])
       sanitation_types <- adult[[gid]]$id
       emissions_sanitation <- adult[[gid]][3:ncols] + child[[gid]][3:ncols]
-      
+
       # apply to all sanitation types
       for(j in 1:length(sanitation_types)){
         sanitation_type <- sanitation_types[j]
@@ -91,7 +93,7 @@ pathogenflow.run <- function(pathogen){
   }
   # TODO: check with @Nynke. Can we ussume this?
   HUMAN_DATA$removalfraction <- replace(HUMAN_DATA$removalfraction, is.na(HUMAN_DATA$removalfraction),1)
-    
+  
   for(i in 1:length(emissions$subarea)){
     emissions$pathogen_urb_conforgrid_sewer[i]<-sum(c(emissions$to_sewerage_flushSewer_urb[i]),na.rm=TRUE) #,emissions$to_sewerage_flushSeptic_urb[i],emissions$to_sewerage_flushPit_urb[i],emissions$to_sewerage_flushOpen_urb[i],emissions$to_sewerage_flushUnknown_urb[i],emissions$to_sewerage_pitSlab_urb[i],emissions$to_sewerage_pitNoSlab_urb[i],emissions$to_sewerage_compostingTwinSlab_urb[i],emissions$to_sewerage_compostingTwinNoSlab_urb[i],emissions$to_sewerage_compostingToilet_urb[i],emissions$to_sewerage_bucketLatrine_urb[i],emissions$to_sewerage_containerBased_urb[i],emissions_to_sewerage_hangingToilet_urb[i],emissions_to_sewerage_openDefecation_urb[i],emissions$to_sewerage_other_urb[i]),na.rm=TRUE) #I added all toilet types, but I think only emissions$to_sewerage_flushSewer_urb should have a value >0
     emissions$pathogen_rur_conforgrid_sewer[i]<-sum(c(emissions$to_sewerage_flushSewer_rur[i]),na.rm=TRUE) #emissions$to_sewerage_flushSeptic_rur[i],emissions$to_sewerage_flushPit_rur[i],emissions$to_sewerage_flushOpen_rur[i],emissions$to_sewerage_flushUnknown_rur[i],emissions$to_sewerage_pitSlab_rur[i],emissions$to_sewerage_pitNoSlab_rur[i],emissions$to_sewerage_compostingTwinSlab_rur[i],emissions$to_sewerage_compostingTwinNoSlab_rur[i],emissions$to_sewerage_compostingToilet_rur[i],emissions$to_sewerage_bucketLatrine_rur[i],emissions$to_sewerage_containerBased_rur[i],emissions_to_sewerage_hangingToilet_rur[i],emissions_to_sewerage_openDefecation_rur[i],emissions$to_sewerage_other_rur[i]),na.rm=TRUE)
