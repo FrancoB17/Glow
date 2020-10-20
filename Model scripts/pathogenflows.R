@@ -59,7 +59,7 @@ pathogenflow.run <- function(pathogen){
     # apply to all sub areas
     for(i in 1:length(emissions$iso)){
       iso_code <- emissions$iso[i]
-      gid <- as.character(HUMAN_DATA$gid[HUMAN_DATA$iso==iso_code])
+      gid <- HUMAN_DATA$gid[HUMAN_DATA$iso==iso_code]
       ncols <- ncol(adult[[gid]])
       sanitation_types <- adult[[gid]]$id
       emissions_sanitation <- adult[[gid]][3:ncols] + child[[gid]][3:ncols]

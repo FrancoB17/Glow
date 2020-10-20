@@ -20,6 +20,9 @@ function(human_data,isoraster,popurban,poprural,wwtp,level,wkt_extent,pathogen_t
   }
   human_data<-gsub("0.00001","NA",human_data)
   human_data <- read.csv(text = human_data)
+  human_data$gid<-as.character(human_data$gid)
+  human_data$iso3<-as.character(human_data$iso3)
+  human_data$subarea<-as.character(human_data$subarea)
 
   cl <- makeCluster(detectCores())
   clusterExport(cl,varlist = c('readers.read.raster','raster','log_info','tic','toc','ENV'))
