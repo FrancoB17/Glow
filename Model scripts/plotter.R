@@ -128,11 +128,18 @@ plotter.plot.map.level4 <- function(emissions,out_file,col,breaks,width,height,b
     if(missing(height)){
       height <- 750
     }
+    xlim<-NULL
+    ylim<-NULL
+    if(!is.null(extent)){
+      extent<-extent(extent)
+      xlim<-c(extent[1],extent[2])
+      ylim<-c(extent[3],extent[4])
+    }
     tryCatch({
       png(filename = out_file, width = width, height = height, units = "px")
       # we set bg to gray, because it the color of missing data
       par(lwd=1,mar=c(6,1,1,1),ps=18,bty="n",bg="gray")
-      print(spplot(boundaries,"logemissions",col.regions=col,at=breaks,colorkey=list(labels = list(width = 4, cex = 2))))
+      print(spplot(boundaries,"logemissions",xlim=xlim,ylim=ylim,col.regions=col,at=breaks,colorkey=list(labels = list(width = 4, cex = 2))))
       
       unit <- ""
       # plot legend
@@ -144,8 +151,8 @@ plotter.plot.map.level4 <- function(emissions,out_file,col,breaks,width,height,b
       
       legend_text <- sprintf("%s emissions %s",pathogen_text,unit)      
       
-      grid.text("legend_text", x=unit(0.85, "npc"), y=unit(0.55, "npc"), rot=90)
-      grid.text("missing data",x=unit(0.88,"npc"),y=unit(0.05,"npc"))
+      grid.text(legend_text, x=unit(0.95, "npc"), y=unit(0.55, "npc"), rot=90,gp = gpar(fontsize = 20))
+      grid.text("missing data",x=unit(0.93,"npc"),y=unit(0.05,"npc"),gp = gpar(fontsize = 20)) 
       
 ##    plot(,col=col,breaks=breaks,legend=FALSE,axes=FALSE,ext=extent)
       # plot administrative borders if given to function on top of the grid.
