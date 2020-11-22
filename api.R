@@ -53,7 +53,7 @@ function(human_data,isoraster,popurban,poprural,wwtp,level,wkt_extent,pathogen_t
   wwtp_input <- NULL
   if(!missing(wwtp)){
     if(!is.null(wwtp)){
-      wwtp_input <- readers.read.wwtp(wwtp)
+#      wwtp_input <- readers.read.wwtp(wwtp)
       wwtp_input<-gsub("0.00001","NA",wwtp)
       wwtp_input<-read.csv(text=wwtp_input)
       wwtp_input$subregion<-as.character(wwtp_input$subregion)
