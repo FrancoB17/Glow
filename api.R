@@ -18,7 +18,7 @@ function(human_data,isoraster,popurban,poprural,wwtp,level,wkt_extent,pathogen_t
   if(is.null(human_data) || is.null(isoraster) || is.null(popurban) || is.null(poprural)){
     stop("Error: missing arguments")
   }
-  human_data<-gsub("0.00001","NA",human_data)
+  human_data<-gsub("0\\.00001","NA",human_data)
   human_data <- read.csv(text = human_data)
   human_data$gid<-as.character(human_data$gid)
   human_data$iso3<-as.character(human_data$iso3)
@@ -54,7 +54,7 @@ function(human_data,isoraster,popurban,poprural,wwtp,level,wkt_extent,pathogen_t
   if(!missing(wwtp)){
     if(!is.null(wwtp)){
 #      wwtp_input <- readers.read.wwtp(wwtp)
-      wwtp_input<-gsub("0.00001","NA",wwtp)
+      wwtp_input<-gsub("0\\.00001","NA",wwtp)
       wwtp_input<-read.csv(text=wwtp_input)
       wwtp_input$subregion<-as.character(wwtp_input$subregion)
       wwtp_input$treatment_type<-as.character(wwtp_input$treatment_type)
