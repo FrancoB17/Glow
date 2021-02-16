@@ -58,8 +58,8 @@ glowpa.run <- function(scenario,human_data,isoraster,popurban,poprural,wwtp_inpu
   # merge defaults for scenario with scenario
   result = withCallingHandlers({
     SCENARIO <<- glowpa.get.params(scenario)
-    log_file <- file.path(SCENARIO$model_output,sprintf("logs/log_run%s_pid%s.txt",SCENARIO$run, Sys.getpid()))
-    logger.init(log_file)
+    LOG_FILE <<- file.path(SCENARIO$model_output,sprintf("logs/log_run%s_pid%s.txt",SCENARIO$run, Sys.getpid()))
+    logger.init(LOG_FILE)
     log_info('Start scenario run with id {SCENARIO$run}')
     params_table <- logger.get.table(SCENARIO)
     log_info('Model started with following params:\n{params_table}')
