@@ -139,6 +139,8 @@ glowpa.run <- function(scenario,human_data,isoraster,popurban,poprural,wwtp_inpu
     
     if(SCENARIO$gadm_level!=4){
       # save geotiff
+      OUTPUT$grid$pathogen_land <<-0.025*OUTPUT$grid$pathogen_land
+      OUTPUT$grid$pathogen_water <<- OUTPUT$grid$pathogen_water + OUTPUT$grid$pathogen_land
       OUTPUT$grid$pathogen_water[OUTPUT$grid$pathogen_water==0]<-NA
       out_file <- file.path(SCENARIO$model_output,sprintf("humanemissions_%s_%s.tif",PATHOGEN$name,SCENARIO$run))
       log_info("Writing raster output")
