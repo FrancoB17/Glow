@@ -23,8 +23,14 @@ pathogenflow.run <- function(pathogen){
   tic("calc pathogenflows loadings")
   # for debugging inside getLoadings
   # loadings <- pathogenflows::getLoadings(onsite_data$urban$child,pathogen_type)
-  cl <- makeCluster(detectCores())
+  cl <- makeCluster(detectCores(),outfile=LOG_FILE)
+  clusterEvalQ(cl, library(pathogenflows))
+  clusterExport(cl, varlist=c("log_info"))
   loadings <- parLapply(cl,unlist(onsite_data,recursive = F),fun = function(x){
+    session_info <- sessionInfo()
+    pid <- Sys.getpid()
+    log_info("pathogenflows pid {pid} : R version: {session_info$R.version$version.string}")
+    log_info("pathogenflows pid {pid} : Library path: {.libPaths()}")
     out <- pathogenflows::getLoadings(x,pathogen_type)
     return(out)
   })
