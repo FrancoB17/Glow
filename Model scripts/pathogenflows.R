@@ -106,6 +106,7 @@ pathogenflow.run <- function(pathogen){
       emissions$pathogen_urb_waterforgrid[i]<-sum(c(emissions$to_surface_flushSewer_urb[i],emissions$to_surface_flushSeptic_urb[i]*(1-HUMAN_DATA$onsiteDumpedland_urb[i]),emissions$to_surface_flushPit_urb[i]*(1-HUMAN_DATA$onsiteDumpedland_urb[i]),emissions$to_surface_flushOpen_urb[i],emissions$to_surface_flushUnknown_urb[i],emissions$to_surface_pitSlab_urb[i]*(1-HUMAN_DATA$onsiteDumpedland_urb[i]),emissions$to_surface_pitNoSlab_urb[i]*(1-HUMAN_DATA$onsiteDumpedland_urb[i]),emissions$to_surface_compostingToilet_urb[i]*(1-HUMAN_DATA$onsiteDumpedland_urb[i]),emissions$to_surface_bucketLatrine_urb[i],emissions$to_surface_containerBased_urb[i],emissions$to_surface_hangingToilet_urb[i],emissions$to_surface_openDefecation_urb[i],emissions$to_surface_other_urb[i]),na.rm=TRUE)
       emissions$pathogen_rur_waterforgrid[i]<-sum(c(emissions$to_surface_flushSewer_rur[i],emissions$to_surface_flushSeptic_rur[i]*(1-HUMAN_DATA$onsiteDumpedland_rur[i]),emissions$to_surface_flushPit_rur[i]*(1-HUMAN_DATA$onsiteDumpedland_rur[i]),emissions$to_surface_flushOpen_rur[i],emissions$to_surface_flushUnknown_rur[i],emissions$to_surface_pitSlab_rur[i]*(1-HUMAN_DATA$onsiteDumpedland_rur[i]),emissions$to_surface_pitNoSlab_rur[i]*(1-HUMAN_DATA$onsiteDumpedland_rur[i]),emissions$to_surface_compostingToilet_rur[i]*(1-HUMAN_DATA$onsiteDumpedland_rur[i]),emissions$to_surface_hangingToilet_rur[i],emissions$to_surface_other_rur[i]),na.rm=TRUE)
     }
+    #MAYBE BETTER TO MOVE THIS TO LATER AND REPLACE BY THE 'OUT' EMISSIONS, currently then calculating twice the same thing.
     else{
       emissions$pathogen_urb_conforgrid[i]<-NA
       emissions$pathogen_rur_conforgrid[i]<-NA
@@ -352,7 +353,8 @@ pathogenflow.calc.totals <- function(emissions){
   totals$total_hangingToilet_out<- rowSums(cbind(emissions$to_surface_hangingToilet_urb_out,emissions$to_surface_hangingToilet_rur_out), na.rm = T)
   totals$total_openDefecation_out<- rowSums(cbind(emissions$to_surface_openDefecation_urb_out,emissions$to_surface_openDefecation_rur_out), na.rm = T)
   totals$total_other_out<- rowSums(cbind(emissions$to_fecalSludge_other_urb_out,emissions$to_surface_other_urb_out,emissions$to_fecalSludge_other_rur_out,emissions$to_surface_other_rur_out), na.rm = T)
-  
+
+  #THERE IS A MISTAKE IN THE CODE BELOW, pitNoSlab seems to have been excluded from the totals calculateion.  
   for (i in 1:length(HUMAN_DATA$iso)){
     if(sum(as.numeric(totals[i,3:15]),na.rm=TRUE)==0 && sum(as.numeric(HUMAN_DATA[i,21:33]),na.rm=TRUE)+sum(as.numeric(HUMAN_DATA[i,44:56]),na.rm=TRUE)==0){
       totals[i,3:15]<-NA      
