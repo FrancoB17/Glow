@@ -6,6 +6,7 @@ log_info("Loaded package {session_info$otherPkgs$pathogenflows$Package}  {sessio
 pathogenflow.run <- function(pathogen){
   log_info("Using Pathogenflows to calculate emissions")
   emissions <- data.frame(iso=HUMAN_DATA$iso,subarea=HUMAN_DATA$subarea)
+
   # 1) extract pathogen type from pathogen
   pathogen_type <- pathogen$pathogenType
   area_types <- c("urban","rural")
@@ -22,7 +23,7 @@ pathogenflow.run <- function(pathogen){
 
   tic("calc pathogenflows loadings")
   # for debugging inside getLoadings
-  # loadings <- pathogenflows::getLoadings(onsite_data$urban$child,pathogen_type)
+  #loadings <- pathogenflows::getLoadings(onsite_data$urban$child,pathogen_type)
   cl <- makeCluster(detectCores(),outfile=LOG_FILE)
   clusterEvalQ(cl, library(pathogenflows))
   clusterExport(cl, varlist=c("log_info"))
@@ -99,6 +100,7 @@ pathogenflow.run <- function(pathogen){
   }
   # TODO: check with @Nynke. Can we ussume this?
   HUMAN_DATA$removalfraction <- replace(HUMAN_DATA$removalfraction, is.na(HUMAN_DATA$removalfraction),1)
+  
   
   for(i in 1:length(emissions$subarea)){
     emissions$pathogen_urb_conforgrid_sewer[i]<-sum(c(emissions$to_sewerage_flushSewer_urb[i]),na.rm=TRUE) #,emissions$to_sewerage_flushSeptic_urb[i],emissions$to_sewerage_flushPit_urb[i],emissions$to_sewerage_flushOpen_urb[i],emissions$to_sewerage_flushUnknown_urb[i],emissions$to_sewerage_pitSlab_urb[i],emissions$to_sewerage_pitNoSlab_urb[i],emissions$to_sewerage_compostingTwinSlab_urb[i],emissions$to_sewerage_compostingTwinNoSlab_urb[i],emissions$to_sewerage_compostingToilet_urb[i],emissions$to_sewerage_bucketLatrine_urb[i],emissions$to_sewerage_containerBased_urb[i],emissions_to_sewerage_hangingToilet_urb[i],emissions_to_sewerage_openDefecation_urb[i],emissions$to_sewerage_other_urb[i]),na.rm=TRUE) #I added all toilet types, but I think only emissions$to_sewerage_flushSewer_urb should have a value >0
@@ -360,7 +362,6 @@ pathogenflow.calc.totals <- function(emissions){
   totals$total_openDefecation_out<- rowSums(cbind(emissions$to_surface_openDefecation_urb_out,emissions$to_surface_openDefecation_rur_out), na.rm = T)
   totals$total_other_out<- rowSums(cbind(emissions$to_fecalSludge_other_urb_out,emissions$to_surface_other_urb_out,emissions$to_fecalSludge_other_rur_out,emissions$to_surface_other_rur_out), na.rm = T)
 
-  #THERE IS A MISTAKE IN THE CODE BELOW, pitNoSlab seems to have been excluded from the totals calculateion.  
   for (i in 1:length(HUMAN_DATA$iso)){
     if(sum(as.numeric(totals[i,3:15]),na.rm=TRUE)==0 && sum(as.numeric(HUMAN_DATA[i,21:33]),na.rm=TRUE)+sum(as.numeric(HUMAN_DATA[i,44:56]),na.rm=TRUE)==0){
       totals[i,3:15]<-NA      
@@ -369,7 +370,7 @@ pathogenflow.calc.totals <- function(emissions){
   
   totals$total<-NA
   for(i in 1:length(totals$iso)){
-    totals$total[i]<-sum(c(totals$total_flushSewer_out[i],totals$total_flushSeptic_out[i],totals$total_flushPit_out[i],totals$total_flushOpen_out[i],totals$total_flushUnknown_out[i],totals$total_pitSlab_out[i],totals$total_flushpitNoSlab_out[i],totals$total_compostingToilet_out[i],totals$total_bucketLatrine_out[i],totals$total_containerBased_out[i],totals$total_hangingToilet_out[i],totals$total_openDefecation_out[i],totals$total_other_out[i]),na.rm=TRUE)
+    totals$total[i]<-sum(c(totals$total_flushSewer_out[i],totals$total_flushSeptic_out[i],totals$total_flushPit_out[i],totals$total_flushOpen_out[i],totals$total_flushUnknown_out[i],totals$total_pitSlab_out[i],totals$total_pitNoSlab_out[i],totals$total_compostingToilet_out[i],totals$total_bucketLatrine_out[i],totals$total_containerBased_out[i],totals$total_hangingToilet_out[i],totals$total_openDefecation_out[i],totals$total_other_out[i]),na.rm=TRUE)
   }
   
   for(i in 1:length(totals$iso)){

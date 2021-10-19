@@ -1,10 +1,10 @@
 
 emissions.calc.avg.pp <- function(emissions){
-  emissions$pathogen_urb_waterforgrid_pp <- emissions$pathogen_urb_waterforgrid/HUMAN_DATA$popurb
-  emissions$pathogen_rur_waterforgrid_pp <- emissions$pathogen_rur_waterforgrid/HUMAN_DATA$poprur
+  emissions$pathogen_urb_waterforgrid_pp <- emissions$pathogen_urb_waterforgrid/(HUMAN_DATA$population*HUMAN_DATA$fraction_urban_pop)
+  emissions$pathogen_rur_waterforgrid_pp <- emissions$pathogen_rur_waterforgrid/(HUMAN_DATA$population*(1-HUMAN_DATA$fraction_urban_pop))
   
-  emissions$pathogen_urb_landforgrid_pp <- emissions$pathogen_urb_landforgrid/HUMAN_DATA$popurb
-  emissions$pathogen_rur_landforgrid_pp <- emissions$pathogen_rur_landforgrid/HUMAN_DATA$poprur
+  emissions$pathogen_urb_landforgrid_pp <- emissions$pathogen_urb_landforgrid/(HUMAN_DATA$population*HUMAN_DATA$fraction_urban_pop)
+  emissions$pathogen_rur_landforgrid_pp <- emissions$pathogen_rur_landforgrid/(HUMAN_DATA$population*(1-HUMAN_DATA$fraction_urban_pop))
   return(emissions)
 }
 
