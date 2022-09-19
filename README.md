@@ -62,11 +62,12 @@ In case anything needs to be changed in the submodule code make sure you make ch
     1. Commit code.
     2. Push code.
 3. Go to GloWPa git 
-4. Update submodule: `git submodule update`
-5. Update the R library locally. `devtools::install_local("libs/pathogenflows/", force = T)` 
-6. Test if everything works
-7. Now the submodule reference code has been updated and needs to be committed to the GloWPa repository: `git commit -a -m "Updated submodule"`
-8. Push to origin. `git push`
+4. Go to libs/pathogenflows
+5. Run `git pull`.
+6. Update the R library locally. `devtools::install_local("libs/pathogenflows/", force = T)` 
+7. Test if everything works
+8. Now the submodule reference code has been updated and needs to be committed to the GloWPa repository: `git commit -a -m "Updated submodule"`
+9. Push to origin. `git push`
 
 ## Running the model
 Set enviroment variables in local_env.R
