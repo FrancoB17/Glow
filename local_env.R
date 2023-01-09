@@ -1,7 +1,6 @@
 # SET LOCAL SETTINGS
-model_dir <- "/home/nauta/Data/Software/GloWPa/"
-model_input_dir <- "/home/nauta/Data/Projects/2020/K2P/02_Experiment/02_Runs/Run0/Input/kla_online/"
-model_output_dir <- "/home/nauta/Data/Projects/2020/K2P/02_Experiment/02_Runs/Run0/Output/"
+model_dir <- "D:/MST/WUR/OneDrive - Wageningen University & Research/PhD/Glowpa_model_human"
+model_input_dir <- "D:/MST/WUR/OneDrive - Wageningen University & Research/PhD/Glowpa_model_human/Model input"
+model_output_dir <- "D:/MST/WUR/OneDrive - Wageningen University & Research/PhD/Glowpa_model_human/Model output"
 csv_sep <- ";"
 # ----
-

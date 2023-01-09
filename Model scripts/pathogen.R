@@ -1,5 +1,6 @@
 
 pathogen.get <- function(){
+  
   pathogen <- NULL
   pathogen_input_file <- file.path(SCENARIO$model_input,"pathogen_inputs.csv")
   if(!file.exists(pathogen_input_file)){
@@ -38,3 +39,4 @@ pathogen.get <- function(){
   return(pathogen)
 }
 
+  
