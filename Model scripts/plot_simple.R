@@ -15,7 +15,7 @@ for(i in 1:nruns){
   
   run<-i
   run<-1
-  plotting_path_in<- "D:/MST/WUR/OneDrive - Wageningen University & Research/PhD/Glowpa_model_human/Model output/"
+  plotting_path_in<- "D:/MST/Test_GloWPa/glowpa-model/Model output/"
 
   file <- sprintf("%shumanemissions_ecoli_%s.tif",plotting_path_in,run)
   rasterfile <- raster(file)

@@ -1,7 +1,5 @@
 #' This script can be used to run the model in an R or Rstudio environment using the overall_inputs file to startup the model
 #'
-Q
-rm(list = ls())
 # SET your local settings in local_env.R
 source("./Model scripts/readers.R")
 source("./Model scripts/GloWPa.R")
